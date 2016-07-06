@@ -1,0 +1,11 @@
+# .bashrc
+
+## add executables for tba & lastz in the path
+## warning: TBA needs an executable blastz in its path
+## blastz is deprecated, lastz has replaced blastz...
+## lastz and blastz work the same way, some bugs have been solved in lastz compared to blastz
+## trick: I copied the lastz executable and renamed it "blastz", so TBA uses lastz in my configuration
+
+export PATH=/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning/scripts/lastz-distrib-1.02.00/bin/:${PATH}
+export PATH=/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning/scripts/multiz-tba.012109/:${PATH}
+

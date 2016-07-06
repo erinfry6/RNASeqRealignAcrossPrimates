@@ -76,13 +76,4 @@ If you run the perl script without defining the parameters (e.g., perl make.exon
 
 #################################################################################
 
-I also copied here the sequence alignment software that I used  (check out http://www.bx.psu.edu/miller_lab/)
-
-multiz-tba.012109  
-
-lastz-distrib-1.02.00 
-
-These contain source code and compiled executables for Linux 64 bit. The executables were compiled on our local Linux server, I don't guarantee they will work on another architecture. 
-
-#################################################################################
 # RNASeqRealignAcrossPrimates

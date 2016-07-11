@@ -17,9 +17,9 @@ Before beginning, create a home directory for the pipeline that contains the fol
 
 								/tba_alignments
 
-home/scratch
+				home/scratch
 
-home/scripts
+				home/scripts
 
 Place the contents of this repository in the scripts folder.
 

@@ -52,7 +52,7 @@ The scripts are divided in the following "modules" (in order of usage):
  
  - run basrc_file with the appropriate PATH 's to run lastz titled 'blastz' instead (blastz is no longer available but lastz does the same thing).
  	Just download the latest version of lastz, make a copy of the executable in the lastz/src directory and name it blastz
- 	Then change the two PATHs to the location of blastz and multiz  *This step was added by EF*
+ 	Then change the two PATHs in bashrc_file to the location of blastz and multiz  *This step was added by EF*
  	
  - align these sequences with LASTZ and TBA (download multiz) using run.tba.alignments.sh *EF has modified this substantially*
 
@@ -83,4 +83,4 @@ If you run the perl script without defining the parameters (e.g., perl make.exon
 
 #################################################################################
 
-######## RNASeqRealignAcrossPrimates
+###### RNASeqRealignAcrossPrimates

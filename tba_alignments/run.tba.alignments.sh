@@ -28,7 +28,7 @@ fi
  
 ######################################################################################
  ## trick to easily parallelize computations: in each parallel run we analyze genes whose human ID ends in ${i}${j} (e.g., 00, 01)
- ## EF has modified this portion substantially
+ ## EF has modified this portion substantially from original code by A. Necsulea
 for i in {0..9}
 do
     for j in {2..9}

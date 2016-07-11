@@ -73,14 +73,14 @@ The scripts are divided in the following "modules" (in order of usage):
 ### In general, for a specific procedure there is a generic perl "script", which takes a rather extensive set of parameters (e.g., species, annotations files, genome sequences etc.). 
 ### Then there is a bash script that defines the correct parameters. The bash script will either not take any arguments at all, or the argument will be the species for which we want to do a specific procedure. 
 
-### For example, you will find in the "get_ensembl_annotations" folder the following scripts:
+For example, you will find in the "get_ensembl_annotations" folder the following scripts:
 
-### make.exon.blocks.ensembl.pl - this is the generic perl script
+make.exon.blocks.ensembl.pl - this is the generic perl script
 
-### make.exon.blocks.ensembl.sh - this is the bash script that runs perl, it only needs the species (e.g., Human, Chimpanzee) as a parameter
+make.exon.blocks.ensembl.sh - this is the bash script that runs perl, it only needs the species (e.g., Human, Chimpanzee) as a parameter
 
-### If you run the perl script without defining the parameters (e.g., perl make.exon.blocks.ensembl.pl)  you will see the full list of parameters for that script. In general the parameter names are intuitive. 
+If you run the perl script without defining the parameters (e.g., perl make.exon.blocks.ensembl.pl)  you will see the full list of parameters for that script. In general the parameter names are intuitive. 
 
 #################################################################################
 
-#### RNASeqRealignAcrossPrimates
+######## RNASeqRealignAcrossPrimates

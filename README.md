@@ -7,15 +7,15 @@ Before beginning, create a home directory for the pipeline that contains the fol
 
 				home/data  		/ensembl_annotations
 
-		   		/ensembl_ortho
+		   						/ensembl_ortho
 
-		   		/genome_sequences
+		   						/genome_sequences
 
-home/results 	/aligned_exons
+				home/results 	/aligned_exons
 
-				/aligned_exons_sequences
+								/aligned_exons_sequences
 
-				/tba_alignments
+								/tba_alignments
 
 home/scratch
 

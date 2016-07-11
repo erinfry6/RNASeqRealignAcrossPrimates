@@ -5,7 +5,7 @@
 
 Before beginning, create a home directory for the pipeline that contains the following subdirectories
 
-home/data  		/ensembl_annotations
+				home/data  		/ensembl_annotations
 
 		   		/ensembl_ortho
 

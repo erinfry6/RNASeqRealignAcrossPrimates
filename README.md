@@ -5,11 +5,11 @@
 
 Before beginning, create a home directory for the pipeline that contains the following subdirectories
 
-				home/data  		/ensembl_annotations
+				home/data  		/ensembl_annotations /each species
 
 		   						/ensembl_ortho
 
-		   						/genome_sequences
+		   						/genome_sequences /each species
 
 				home/results 	/aligned_exons /each species
 

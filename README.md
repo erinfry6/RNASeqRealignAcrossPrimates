@@ -11,9 +11,9 @@ Before beginning, create a home directory for the pipeline that contains the fol
 
 		   						/genome_sequences
 
-				home/results 	/aligned_exons
+				home/results 	/aligned_exons /each species
 
-								/aligned_exons_sequences
+								/aligned_exons_sequences /each species
 
 								/tba_alignments
 
@@ -52,19 +52,19 @@ The scripts are divided in the following "modules" (in order of usage):
  
  - run basrc_file with the appropriate PATH 's to run lastz titled 'blastz' instead (blastz is no longer available but lastz does the same thing).
  	Just download the latest version of lastz, make a copy of the executable in the lastz/src directory and name it blastz
- 	Then change the two PATHs in bashrc_file to the location of blastz and multiz  *This step was added by EF*
+ 	Then change the two PATHs to the location of blastz and multiz  *This step was added by EF*
  	
  - align these sequences with LASTZ and TBA (download multiz) using run.tba.alignments.sh *EF has modified this substantially*
 
 5) extract_aligned_exons
 
- - extract aligned exon coordinates from the TBA alignments
+ - extract aligned exon coordinates from the TBA alignments extract.aligned.exons.sh
 
- - sanity checks:  all species must have the same aligned exon sequence length
+ - sanity checks:  all species must have the same aligned exon sequence length check.aligned.length.R
 
- - extract aligned exon sequence for each 1-1 ortho gene family and for each species 
+ - extract aligned exon sequence for each 1-1 ortho gene family and for each species extract.aligned.exons.sequences.sh
 
- - check exon alignments by  computing % sequence identity
+ - check exon alignments by  computing % sequence identity compute.percentage.identity.sh
  
 6) Kallisto RNA Sequencing mapping
 

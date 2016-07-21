@@ -4,6 +4,8 @@ use strict;
 ######################################################################
 ######################################################################
 
+## slight modifications from EF in the readFasta function, changed "zcat" to "gunzip -c" for Macs
+
 sub readFasta{
 
     my $path=$_[0];

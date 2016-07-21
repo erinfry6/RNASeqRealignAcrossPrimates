@@ -48,7 +48,7 @@ The scripts are divided in the following "modules" (in order of usage):
 
 4) tba_alignments
 
- - extract.fasta.genes.sh sequences (including exons and introns) for each 1-1 ortho gene family, for each species
+ - extract.fasta.genes.sh sequences (including exons and introns) for each 1-1 ortho gene family, for each species *EF made slight modifications in first function of perl script to run on a mac*
  
  - run basrc_file with the appropriate PATH 's to run lastz titled 'blastz' instead (blastz is no longer available but lastz does the same thing).
  	Just download the latest version of lastz, make a copy of the executable in the lastz/src directory and name it blastz
@@ -62,7 +62,7 @@ The scripts are divided in the following "modules" (in order of usage):
 
  - sanity checks:  all species must have the same aligned exon sequence length check.aligned.length.R
 
- - extract aligned exon sequence for each 1-1 ortho gene family and for each species extract.aligned.exons.sequences.sh
+ - extract aligned exon sequence for each 1-1 ortho gene family and for each species extract.aligned.exons.sequences.sh *EF made slight modifications in first function of perl script to run on a mac*
 
  - check exon alignments by  computing % sequence identity compute.percentage.identity.sh
  

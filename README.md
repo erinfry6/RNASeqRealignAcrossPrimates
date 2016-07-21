@@ -13,7 +13,9 @@ Before beginning, create a home directory for the pipeline that contains the fol
 
 				home/results 	/aligned_exons /each species
 
-								/aligned_exons_sequences /each species
+								/aligned_exons_sequences
+								
+								/aligned_exons_sequences_by_species
 
 								/tba_alignments
 

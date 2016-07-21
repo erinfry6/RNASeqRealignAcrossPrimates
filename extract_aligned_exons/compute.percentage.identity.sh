@@ -2,7 +2,7 @@
 
 ######################################################################################
 
-export path=/scratch/cluster/monthly/anecsule/ComparableAnnotations
+export path=/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning ##set full path
 export pathFasta=${path}/data/genome_sequences
 export pathAnnot=${path}/data/ensembl_annotations
 export pathOrtho=${path}/data/ensembl_ortho
@@ -14,7 +14,7 @@ export release=84
 
 ######################################################################################
 
-export speciesList="Human,Chimpanzee,Gorilla,Orangutan,Macaque,Mouse,Opossum,Platypus,Chicken,Xenopus"
+export speciesList="Human,Chimpanzee,Gorilla,Orangutan,Macaque"
 
 ######################################################################################
 

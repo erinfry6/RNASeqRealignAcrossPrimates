@@ -3,7 +3,7 @@
 #######################################################################
 ### this script collects all aligned exon sequences for one species and places them in a fasta file for Kallisto
 ## it reorganizes the aligned exon sequences by species instead of 1-1 ortho gene family
-## be sure to change the species list in the for loop to match your species
+## to run the file, type ' ./reorganize.by.species.sh SPECIES ', replacing SPECIES with each of your species
 
 ## This script was written by Erin Fry
 
@@ -17,7 +17,7 @@ export release=84
  
 ######################################################################################
 
-for sp in Human Chimpanzee Gorilla Organutan Macaque
+sp=$1
 
 	if [ ${sp} = "Human" ]; then
     	export name="ENSG"
@@ -39,11 +39,20 @@ for sp in Human Chimpanzee Gorilla Organutan Macaque
     	export name="ENSMMUG"
 	fi
 
+if [ ${sp} = "Human" ]; then
+    for f in ${pathAlignedExonsSequences}/ENSG*
+	do
+	number=$(grep -n "ENSPTRG" $f | grep -Eo '^[^:]+')
+	((number--))
+	head -${number} $f >>${pathResults}/${sp}.fa
+	done
+  
+  
+else 
 
 	for f in ${pathAlignedExonsSequences}/ENSG*
 	do
 	head -1 $f >>${pathResults}/${sp}.fa
 	sed -n -e '/'${name}'/,/>/ p' $f | sed '1d;$d' >>${pathResults}/${sp}.fa
 	done
-
-done
+fi

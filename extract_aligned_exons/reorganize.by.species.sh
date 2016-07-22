@@ -56,3 +56,5 @@ else
 	sed -n -e '/'${name}'/,/>/ p' $f | sed '1d;$d' >>${pathResults}/${sp}.fa
 	done
 fi
+
+cp ${pathResults}/Chimpanzee.fa ${pathResults}/Bonobo.fa

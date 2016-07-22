@@ -70,7 +70,7 @@ The scripts are divided in the following "modules" (in order of usage):
  
  - reorganize extract aligned exon sequences by species, not 1-1 ortho gene 'reorganize.by.species.sh Human' *EF written code starts here*
  
-6) map RNA sequencing data
+6) Pseudo-align and quantify RNA sequencing data
 
  - download.raw.read.sh downloads the raw read .sra files from Brawand et al's original paper
  

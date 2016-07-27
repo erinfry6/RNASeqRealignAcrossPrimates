@@ -52,7 +52,13 @@ if [ ${sp} = "Human" ]; then
 	head -${number} $f >>${pathResults}/${sp}.fa
 	done
   
-  
+elif [ ${sp} = "Macaque" ]; then
+    for f in ${pathAlignedExonsSequences}/ENSG*
+	do
+	head -1 $f >>${pathResults}/${sp}.fa
+	sed -n -e '/'${name}'/,/>/ p' $f | sed '1d' >>${pathResults}/${sp}.fa
+  	done  
+
 else 
 
 	for f in ${pathAlignedExonsSequences}/ENSG*

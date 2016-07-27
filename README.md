@@ -77,6 +77,9 @@ The scripts are divided in the following "modules" (in order of usage):
  - download.raw.read.sh downloads the raw read .sra files from Brawand et al's original paper
  
  - create.fastq.files.sh creates index files and RNA-seq count files using Kallisto, requires modification depending on species
+ 
+ - quantify.RNA.seq.sh psuedoaligns and quantifies RNA seq data to fasta files using Kallisto
+ 
 
 #################################################################################
 

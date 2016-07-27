@@ -40,6 +40,7 @@ sp=$1
 	fi
 
 ## if human, take all lines before the next species in the fasta files and put it in the new species.fa fasta file
+## if macaque, or last species in list, extract all lines after the macaque ensembl ID name
 ## for all other species, take all lines between the species ensembl ID code and the next species transcript (indicated by '>') 
 ## again, place this transcript in the species.fa fasta file
 ## each new species.fa file wil lhave the sequences for that species filed under the human transcript ensembl ID

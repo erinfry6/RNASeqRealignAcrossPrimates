@@ -1,6 +1,6 @@
 ##!/bin/bash
 
-
+## written by EF in July 2016
 ## Download the RNA seq raw data from NCBI Geo : http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE30352
 ## Convert the .sra RNA-seq files to .fastq files for analysis with Kallisto
 ## ** requires SRA toolkit (brew install homebrew/science/sratoolkit) **
@@ -19,12 +19,12 @@ cd ${pathRNAseq}
 
 ## Convert the .sra RNA-seq files to .fastq files for analysis with Kallisto
 
-	for f in *
+	for d in *
 	do
-		fastq-dump $f --split-3
+		cd $d
+		fastq-dump RNAseq.sra --split-3
+		cd ..
 	done
-	
-	mv *F_1.fastq *F_1_1.fastq
 	
 	
 cd ${pathScripts}

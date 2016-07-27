@@ -10,6 +10,8 @@ Before beginning, create a home directory for the pipeline that contains the fol
 		   						/ensembl_ortho
 
 		   						/genome_sequences /each species
+		   						
+		   						/RNA_seq_raw /each RNA seq sample
 
 				home/results 	/aligned_exons /each species
 
@@ -53,7 +55,7 @@ The scripts are divided in the following "modules" (in order of usage):
  - extract.fasta.genes.sh sequences (including exons and introns) for each 1-1 ortho gene family, for each species *EF made slight modifications in first function of perl script to run on a mac*
  
  - run basrc_file with the appropriate PATH 's to run lastz titled 'blastz' instead (blastz is no longer available but lastz does the same thing).
- 	Just download the latest version of lastz, make a copy of the executable in the lastz/src directory and name it blastz
+ 	Download the latest version of lastz, make a copy of the executable in the lastz/src directory and name it blastz
  	Then change the two PATHs to the location of blastz and multiz  *This step was added by EF*
  	
  - align these sequences with LASTZ and TBA (download multiz) using run.tba.alignments.sh *EF has modified this substantially*

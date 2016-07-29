@@ -70,4 +70,4 @@ else
 fi
 
 ## use the chimpanzee genome and annotations/transcripts as the Bonobo until ensembl publishes annotated Bonobo gnenome
-cp ${pathResults}/Chimpanzee.fa ${pathResults}/Bonobo.fa
+## cp ${pathResults}/Chimpanzee.fa ${pathResults}/Bonobo.fa

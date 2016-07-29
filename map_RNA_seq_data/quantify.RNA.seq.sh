@@ -9,7 +9,7 @@
 export path=/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning ##set base directory path
 export pathExonFasta=${path}/results/aligned_exons_sequences_by_species
 export pathRNAseq=${path}/data/RNA_seq_raw
-export pathResults=${path}/results/GeneExpression
+export pathResults=${path}/results/RawGeneExpression
 export pathScripts=${path}/scripts/map_RNA_seq_data
 
 ##########################################################################################
@@ -22,8 +22,9 @@ cd ${pathExonFasta}
 
 for sp in *.fa
 	do
-		#echo Creating index file for ${sp}
-		#kallisto index -i $sp.idx $sp
+	
+	echo Creating index file for ${sp}
+	kallisto index -i $sp.idx $sp
 	
 	if [ ${sp} = "Human.fa" ]; then
     	export name="hsa"

@@ -20,6 +20,8 @@ Before beginning, create a home directory for the pipeline that contains the fol
 								/aligned_exons_sequences_by_species
 
 								/tba_alignments
+								
+								/RawGeneExpression
 
 				home/scratch
 
@@ -78,7 +80,7 @@ The scripts are divided in the following "modules" (in order of usage):
  
  - create.fastq.files.sh creates index files and RNA-seq count files using Kallisto, requires modification depending on species
  
- - quantify.RNA.seq.sh psuedoaligns and quantifies RNA seq data to fasta files using Kallisto
+ - quantify.RNA.seq.sh pseudoaligns and quantifies RNA seq data to fasta files using Kallisto
  
 
 #################################################################################

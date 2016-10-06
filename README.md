@@ -74,7 +74,10 @@ The scripts are divided in the following "modules" (in order of usage):
 
  - check exon alignments by  computing % sequence identity `./compute.percentage.identity.sh`
  
- - reorganize extract aligned exon sequences by species, not 1-1 ortho gene `./reorganize.by.species.sh Human` *EF written code starts here*
+  ### EF written code starts here
+ 
+ - reorganize extract aligned exon sequences by species, not 1-1 ortho gene `./reorganize.by.species.sh Human`
+ 
  
 6) download_RNAseq_files
 

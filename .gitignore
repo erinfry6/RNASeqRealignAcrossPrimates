@@ -1,0 +1,8 @@
+*.DS_Store
+lastz-distrib-1.02.00/
+lastz-distrib/
+multiz-tba.012109/
+tba_alignments/.RData
+tba_alignments/.Rhistory
+kallisto/
+get_ensembl_annotations/species_scripts/

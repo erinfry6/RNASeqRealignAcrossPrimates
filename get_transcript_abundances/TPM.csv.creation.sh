@@ -28,4 +28,4 @@ echo all abundance.tsv files dont have the same number of orthologs, error at ${
 fi
 done
 
-R --vanilla <Abundance.file.R
+R --vanilla <Collect.All.Sample.Abundances.R

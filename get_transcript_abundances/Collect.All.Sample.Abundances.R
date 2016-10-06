@@ -1,7 +1,7 @@
 path="/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning/" ##full absolute path to main directory
-pathResults=paste(path,"results/",sep="")
-pathData=paste(path,"data/",sep="")
-pathRaw=paste(pathResults,"RawGeneExpression/",sep="")
+pathData=paste(path,"results/",sep="")
+pathRaw=paste(pathData,"RawGeneExpression/",sep="")
+pathResults=paste(path,"results/","RawGeneExpression",sep="")
 
 setwd(pathRaw)
 ldf <- list() # creates a list
@@ -21,5 +21,5 @@ for (k in 1:length(listcsv)){
 
 head(Abundances)
 
-setwd(pathRaw)
-write.table(Abundances,"All_Abundances.csv", sep="\t",row.names=FALSE,col.names=FALSE)
+setwd(pathResults)
+write.table(Abundances,"Transcript_Abundances.txt", sep="\t",row.names=FALSE,col.names=TRUE)

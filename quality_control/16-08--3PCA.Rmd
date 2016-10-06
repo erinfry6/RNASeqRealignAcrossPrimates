@@ -1,0 +1,329 @@
+---
+title: "PCA and Quality Control of Brawand et al RNA Seq data"
+author: "Erin Fry"
+date: "August 3 2016"
+output: html_document
+---
+
+Special thanks to Sarah Urbut
+
+#Create and prepare the transcript abundance file using alignment and quantifying pipeline
+Create mart.export.txt file containing the EnsemblID, associated gene name, and chromosomal location using ensembl > biomart > filter with gene IDs, attributes gene ID, associated gene name and chromosome > results . Put this file in the data direcotry.
+
+
+```{r set directories}
+path="/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning/" ##full absolute path to main directory
+pathresults=paste(path,"results/",sep="")
+pathdata=paste(path,"data/",sep="")
+pathResults=paste(pathresults,"QualityControl/",sep="")
+```
+
+
+#Download the data and eliminate mitochondrial and non-expressed genes, then sqrt transform the data
+```{r Load data, include=FALSE}
+setwd(pathResults)
+TPM_raw<-read.table("Transcript_Abundances.txt", header=TRUE, sep="\t", na.strings='NA', stringsAsFactors = FALSE)
+
+## upload gene information
+geneinfo<-read.table(paste(pathdata,"mart_export.txt",sep=""),header=TRUE,sep='\t',na.strings='NA',stringsAsFactors = FALSE)
+
+
+## if there are any EnsemblIDs without a match in biomart, find their chromosomal location and gene name online
+TPM_raw$Human_Ortho_EnsemblID[which(!TPM_raw$Human_Ortho_EnsemblID %in% geneinfo$Ensembl.Gene.ID)]
+
+## reload mart_export.txt with any modifications
+
+geneinfo<-read.table(paste(pathdata,"mart_export.txt",sep=""),header=TRUE,sep='\t',na.strings='NA',stringsAsFactors = FALSE)
+
+TPM_raw<-cbind(TPM_raw[,1],geneinfo[,c(2,3)],TPM_raw[,-1])
+
+#be sure that there are no mitochondrial genes
+
+#make sure to eliminate all Mitochondrial genes, then get rid of the Chromosome.Name column
+library("dplyr")
+TPM_noMT<-filter(TPM_raw, Chromosome.Name !="MT")
+#number of mitochondrial genes
+length(filter(TPM_raw, Chromosome.Name !="MT"))
+
+#make the row names
+rownames(TPM_noMT)<-TPM_noMT[,1]
+TPM_noMT <- TPM_noMT[-nrow(TPM_noMT),-1]
+
+## remove rows containing gene names and chromosomes for PCA
+
+TPM_noMT_PCA<-TPM_noMT[,3:ncol(TPM_noMT)]
+
+#make sure only taking genes with >0 TPM expression level
+TPM_noMT_PCA_expressed<- TPM_noMT_PCA[rowSums(TPM_noMT_PCA)>44,]
+
+
+##Square root transform the data
+TPM_noMT_PCA_expressed_sqrt<-sqrt(TPM_noMT_PCA_expressed)
+
+```
+
+
+```{r}
+plot_scores <- function(pca, scores, n, m, cols, points=F, pchs =20, legend=F){
+  xmin <- min(scores[,n]) - (max(scores[,n]) - min(scores[,n]))*0.05
+  if (legend == T){ ## let some room (35%) for a legend                                                                                                                                                 
+    xmax <- max(scores[,n]) + (max(scores[,n]) - min(scores[,n]))*0.50
+  }
+  else {
+    xmax <- max(scores[,n]) + (max(scores[,n]) - min(scores[,n]))*0.05
+  }
+  ymin <- min(scores[,m]) - (max(scores[,m]) - min(scores[,m]))*0.05
+  ymax <- max(scores[,m]) + (max(scores[,m]) - min(scores[,m]))*0.05
+  plot(scores[,n], scores[,m], xlab=paste("PC", n, ": ", round(summary(pca)$importance[2,n],3)*100, "% variance explained", sep=""), ylab=paste("PC", m, ": ", round(summary(pca)$importance[2,m],3)*100, "% variance explained", sep=""), main="PCA of Brain Transcription in Primates", xlim=c(xmin, xmax), ylim=c(ymin, ymax), type="n")
+  if (points == F){
+    text(scores[,n],scores[,m], rownames(scores), col=cols, cex=1)
+  }
+  else {
+    points(scores[,n],scores[,m], col=cols, pch=pchs, cex=1.3)
+  }
+}
+
+categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "hsa.br.M.4"="blue", "hsa.br.M.5"="blue","mml.br.F.1"="orange", "mml.br.M.2"="orange", "mml.br.M.1"="orange", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
+
+
+#plot PCs for this exp data
+pca_genes<-prcomp(t(TPM_noMT_PCA_expressed_sqrt), scale=F)
+scores<-pca_genes$x
+
+#Plot PC 1 and 2
+for (n in 1:1){
+  plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
+}
+# 3 and 4
+for (n in 3:3){
+  plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
+}
+# 5 and 6
+for (n in 5:5){
+  plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
+}
+
+
+
+plotDensities(TPM_noMT_PCA_expressed_sqrt, col=categoricalData, legend="topright")
+plotDensities(TPM_noMT_PCA_expressed_sqrt[,8], col=categoricalData, legend="topright")
+plotDensities(TPM_noMT_PCA_expressed_sqrt[,9], col=categoricalData, legend="topright")
+plotDensities(log(TPM_noMT_PCA_expressed), col=categoricalData, legend="topright")
+
+
+
+plotDensities(normalizeBetweenArrays(TPM_noMT_PCA_expressed_sqrt), col=categoricalData, legend="topright")
+
+library("EDASeq")
+
+
+
+dge_original <- DGEList(counts=as.matrix(TPM_noMT_PCA_expressed_sqrt), genes=rownames(TPM_noMT_PCA_expressed_sqrt))
+
+dge_original <- calcNormFactors(dge_original)
+
+tmm_cpm <- cpm(dge_original, normalized.lib.sizes=TRUE, log=TRUE, prior.count = 0.25)
+head(cpm)
+
+plotDensities(tmm_cpm, col=categoricalData, legend="topright")
+
+##Human male 4
+plotDensities(tmm_cpm[,8], col=categoricalData, legend="topright")
+## human male 5
+plotDensities(tmm_cpm[,9], col=categoricalData, legend="topright")
+
+
+``` 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r PCA col sums greater than 0}
+
+#center data by row mean (mean of gene trascription data) so that extreme values don't heavily influence PCs
+TP.center=TPM_noMT_PCA_expressed_sqrt-rowMeans(TPM_noMT_PCA_expressed_sqrt)
+#use svd to create PCs, v, u, and d are attributes of the data
+svd.tp=svd(TP.center);v=svd.tp$v;u=svd.tp$u;d=svd.tp$d
+#plot PCs 1 and 2 with text as names
+#plot(v[,1],v[,2])
+#text(v[,1],v[,2],colnames(TPM_brain))
+#par(v[,1],v[,2],col=mycolors)
+
+#visualize variance explained by each PC
+plot(svd.tp$d^2/sum(svd.tp$d^2), xlim = c(0, 15), type = "b", pch = 16, xlab = "Principal Components", ylab = "variance explained", main="Variance In each PC")
+ 
+
+categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "hsa.br.M.4"="blue", "hsa.br.M.5"="blue","mml.br.F.1"="orange", "mml.br.M.2"="orange", "mml.br.M.1"="orange", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
+
+#or use ggplot, which is easier for now
+library("ggplot2")
+ggplot(data = as.data.frame(v), aes(x = v[,1], y = v[,2], label = colnames(TP.center))) +
+  geom_hline(yintercept = 0, color = "gray65") +
+  geom_vline(xintercept = 0, color = "gray65") +
+  geom_text(color= categoricalData, alpha = 0.8, size = 6) +
+  ggtitle("PCA plot of Brain Transcipt Levels in Primates, >0") +
+  theme(plot.title = element_text(size=20, face="bold", vjust=2))
+
+
+##lets try removing hsa_br_M_4 bc he's so out there
+
+svd.tp=svd(TP.center[,-7]);v=svd.tp$v;u=svd.tp$u;d=svd.tp$d
+
+plot(svd.tp$d^2/sum(svd.tp$d^2), xlim = c(0, 15), type = "b", pch = 16, xlab = "Principal Components", ylab = "variance explained", main="Variance In each PC")
+
+categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "hsa.br.M.5"="blue","mml.br.F.1"="orange", "mml.br.M.2"="orange", "mml.br.M.1"="orange", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
+
+ggplot(data = as.data.frame(v), aes(x = v[,1], y = v[,2], label = colnames(TP.center[,-7]))) +
+  geom_hline(yintercept = 0, color = "gray65") +
+  geom_vline(xintercept = 0, color = "gray65") +
+  geom_text(color= categoricalData, alpha = 0.8, size = 6) +
+  ggtitle("PCA plot of Brain Transcipt Levels in Primates, >0, without human M4") +
+  theme(plot.title = element_text(size=20, face="bold", vjust=2))
+
+
+
+#remove HM4 and HM1
+svd.tp=svd(TP.center[,-c(4,7)]);v=svd.tp$v;u=svd.tp$u;d=svd.tp$d
+
+plot(svd.tp$d^2/sum(svd.tp$d^2), xlim = c(0, 15), type = "b", pch = 16, xlab = "Principal Components", ylab = "variance explained", main="Variance In each PC")
+
+categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "hsa.br.M.5"="blue","mml.br.F.1"="orange", "mml.br.M.2"="orange", "mml.br.M.1"="orange", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
+
+p<-ggplot(data = as.data.frame(v), aes(x = v[,1], y = v[,2], label = colnames(TP.center[,-c(4,7)]))) +
+  geom_hline(yintercept = 0, color = "gray65") +
+  geom_vline(xintercept = 0, color = "gray65") +
+  geom_text(color= categoricalData, alpha = 0.8, size = 6) +
+  ggtitle("PCA plot of Brain Transcipt Levels in Primates,without human M4 and Macaque") +
+  theme(plot.title = element_text(size=20, face="bold", vjust=2))
+p
+
+
+#remove HM4 and all macaques
+svd.tp=svd(TP.center[,-c(7,9,10,11)]);v=svd.tp$v;u=svd.tp$u;d=svd.tp$d
+
+plot(svd.tp$d^2/sum(svd.tp$d^2), xlim = c(0, 15), type = "b", pch = 16, xlab = "Principal Components", ylab = "variance explained", main="Variance In each PC")
+
+categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "hsa.br.M.5"="blue", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
+
+p<-ggplot(data = as.data.frame(v), aes(x = v[,1], y = v[,2], label = colnames(TP.center[,-c(7,9,10,11)]))) +
+  geom_hline(yintercept = 0, color = "gray65") +
+  geom_vline(xintercept = 0, color = "gray65") +
+  geom_text(color= categoricalData, alpha = 0.8, size = 6) +
+  ggtitle("PCA plot of Brain Transcipt Levels in Primates,without human M4 and Macaque") +
+  theme(plot.title = element_text(size=20, face="bold", vjust=2))
+p
+
+
+
+#create a heatmap
+heatmap(as.matrix(TP.center),)
+
+```
+
+
+
+
+```{r PCA col sums greater than 0 without mml.brM1, mml.brF1, hsa.brM5 because sample from non cortex tissue}
+TPM_brain1<- TPM_brain[,-c(5,21,22)]
+TPM_brain1<- TPM_brain1[colSums(TPM_brain1)!=0, ]
+
+TP.center=TPM_brain1-rowMeans(TPM_brain1)
+
+
+#use svd to create PCs, v, u, and d are attributes of the data
+svd.tp=svd(TP.center);v=svd.tp$v;u=svd.tp$u;d=svd.tp$d
+#plot PCs 1 and 2 with text as names
+#plot(v[,1],v[,2])
+#text(v[,1],v[,2],colnames(TPM_brain))
+#par(v[,1],v[,2],col=mycolors)
+
+mycolors1<-c("blue", "blue", "blue", "blue", "blue", "red", "red", "red", "red", "red", "red", "#999999", "#999999", "#999999", "#0072B2", "#0072B2", "#56B4E9", "#56B4E9", "orange")
+
+#or use ggplot, which is easier for now
+library(ggplot2)
+p<-ggplot(data = as.data.frame(v), aes(x = v[,3], y = v[,4], label = colnames(TP.center))) +
+  geom_hline(yintercept = 0, color = "gray65") +
+  geom_vline(xintercept = 0, color = "gray65") +
+  geom_text(color= mycolors1, alpha = 0.8, size = 6) +
+  ggtitle("PCA plot of Brain Transcipt Levels in Primates Frontal Cortices") +
+  theme(plot.title = element_text(size=20, face="bold", vjust=2)) +
+  labs( x="PC3 (explained variance, 0.093)", y="PC4 (explained variance, 0.066)", face="bold", size=30)
+p
+
+heatmap(as.matrix(TP.center))
+```
+
+
+```{r bootstrapping SVD}
+#bootstrap through the PCs by creating new matrices
+#choose the total number of new data to create (must think about if by individuals or genes)
+sample=22
+
+#pick sample new observations, plot onto PC plot, then pick another and plot cont.....
+#B is the total number of bootstraps
+B=50
+
+#begin initial PC plot from original data
+library(ggplot2)
+p<-ggplot(data = as.data.frame(v), aes(x = v[,1], y = v[,2], label = colnames(TP.center))) +
+  geom_hline(yintercept = 0, color = "gray65") +
+  geom_vline(xintercept = 0, color = "gray65") +
+  geom_text(color= categoricalData, alpha = 0.8, size = 6) +
+  ggtitle("PCA plot of Brain Transcipt Levels in Primates, <0") +
+  theme(plot.title = element_text(size=20, face="bold", vjust=2))
+p
+
+#set new TP.center data to TP.center.boot to not override
+TP.center.boot=TP.center
+
+#do B bootstraps by pikcing 'sample' number of individuals from original data for each bootstrap
+for(b in 1:B){
+  newcol=matrix(nrow=nrow(TP.center),ncol=sample)
+#sample random individuals from data (TP.center)
+for(i in 1:sample){
+  ind=sample(seq(1:22),1)
+  newcol[,i]=TP.center.boot[,ind]
+  }
+#with new matrix, find PCs
+#center data by row mean (mean of gene trascription data) so that extreme values don't heavily influence PCs
+#use svd to create PCs, v, u, and d are attributes of the data
+svd.boot=svd(as.matrix(newcol));v.b=svd.boot$v
+#add to the plot
+p<- p+ geom_text(aes(x = v.b[,1], y = v.b[,2]), color= categoricalData, alpha = 0.8, size = 6, add=T)
+}
+#print new bootstrapped PC analysis
+p
+
+
+
+
+p+ layer(geom_text(aes(x = v.b[,1], y = v.b[,2]), color= categoricalData, alpha = 0.8, size = 6, add=T))
+x=1
+for(b in 1:B){
+  x=x+1
+  }
+x
+
+
+plot(density(TPM_noMT_PCA_expressed_sqrt[,1])$y, type = "l",col=categoricalData[k],xlab="Intensity",ylab="Density",ylim=c(0,.2))
+
+for (k in 2:ncol(TPM_noMT_PCA_expressed_sqrt)){
+  lines(density(TPM_noMT_PCA_expressed_sqrt[,k])$y,col=categoricalData[k])
+}
+
+
+
+
+
+```
+

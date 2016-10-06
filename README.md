@@ -21,7 +21,9 @@ Before beginning, create a home directory for the pipeline that contains the fol
 
 								/tba_alignments
 								
-								/RawGeneExpression
+								/FASTQC
+								
+								/Quality Control
 
 				home/scratch
 
@@ -30,7 +32,7 @@ Before beginning, create a home directory for the pipeline that contains the fol
 Place the contents of this repository in the scripts folder.
 
 
-Adapted scripts and instructions:
+### Adapted scripts and instructions:
 
 #################################################################################
 
@@ -38,50 +40,81 @@ The scripts are divided in the following "modules" (in order of usage):
 
 #################################################################################
 
-1) download_genomes  - simple script to download genome sequences from Ensembl FTP site  *EF eliminated unnecessary species*
+1) `./download_genomes`  - simple script to download genome sequences from Ensembl FTP site  *EF eliminated unnecessary species*
 
 2) get_ensembl_annotations 
 
-  - download annotations from the Ensembl MySQL database using ./get.ensembl.annotations.sh Human *EF again eliminated unnecessary species*
+  - download annotations from the Ensembl MySQL database `./get.ensembl.annotations.sh Human` *EF again eliminated unnecessary species*
 
- -  format annotations into "exon blocks" (union of all exon coordinates) using ./make.exon.blocks.ensembl.sh $species
+ -  format annotations into "exon blocks" (union of all exon coordinates) `./make.exon.blocks.ensembl.sh $species`
 
 3) get_ensembl_ortho
 
- - extract all 1-1 orthology relationships from the Ensembl MySQL database using get_ortho_ensembl_mysql.sh
+ - extract all 1-1 orthology relationships from the Ensembl MySQL database `./get_ortho_ensembl_mysql.sh`
 
- - extract all 1-1 orthologous families for a given set of species using extract.ortho.families.sh
+ - extract all 1-1 orthologous families for a given set of species `./extract.ortho.families.sh`
 
 4) tba_alignments
 
- - extract.fasta.genes.sh sequences (including exons and introns) for each 1-1 ortho gene family, for each species *EF made slight modifications in first function of perl script to run on a mac*
+ - `./extract.fasta.genes.sh` sequences (including exons and introns) for each 1-1 ortho gene family, for each species *EF made slight modifications in first function of perl script to run on a mac*
  
- - run basrc_file with the appropriate PATH 's to run lastz titled 'blastz' instead (blastz is no longer available but lastz does the same thing).
+ - `./basrc_file` with the appropriate PATH 's to run lastz titled 'blastz' instead (blastz is no longer available but lastz does the same thing).
  	Download the latest version of lastz, make a copy of the executable in the lastz/src directory and name it blastz
  	Then change the two PATHs to the location of blastz and multiz  *This step was added by EF*
  	
- - align these sequences with LASTZ and TBA (download multiz) using run.tba.alignments.sh *EF has modified this substantially*
+ - align these sequences with LASTZ and TBA (download multiz) `./run.tba.alignments.sh` *EF has modified this substantially*
 
 5) extract_aligned_exons
 
- - extract aligned exon coordinates from the TBA alignments extract.aligned.exons.sh
+ - extract aligned exon coordinates from the TBA alignments `./extract.aligned.exons.sh`
 
- - sanity checks:  all species must have the same aligned exon sequence length check.aligned.length.R
+ - sanity checks:  all species must have the same aligned exon sequence length `check.aligned.length.R`
 
- - extract aligned exon sequence for each 1-1 ortho gene family and for each species extract.aligned.exons.sequences.sh *EF made slight modifications in first function of perl script to run on a mac*
+ - extract aligned exon sequence for each 1-1 ortho gene family and for each species `./extract.aligned.exons.sequences.sh` *EF made slight modifications in first function of perl script to run on a mac*
 
- - check exon alignments by  computing % sequence identity compute.percentage.identity.sh
+ - check exon alignments by  computing % sequence identity `./compute.percentage.identity.sh`
  
- - reorganize extract aligned exon sequences by species, not 1-1 ortho gene 'reorganize.by.species.sh Human' *EF written code starts here*
+ - reorganize extract aligned exon sequences by species, not 1-1 ortho gene `./reorganize.by.species.sh Human` *EF written code starts here*
  
-6) Pseudo-align and quantify RNA sequencing data
+6) download_RNAseq_files
 
- - download.raw.read.sh downloads the raw read .sra files from Brawand et al's original paper
+ - `./download.raw.read.sh` downloads the raw read .sra files from Brawand et al's original paper
  
- - create.fastq.files.sh creates index files and RNA-seq count files using Kallisto, requires modification depending on species
+ - `./create.fastq.files.sh` creates index files and RNA-seq count files using Kallisto, requires modification depending on species
  
- - quantify.RNA.seq.sh pseudoaligns and quantifies RNA seq data to fasta files using Kallisto
+ - `./run_fastQC.sh` runs fastqc creates .html files for visual inspection of RNA-seq data quality
  
+ 7) get_transcript_abundances
+
+ - `./quantify.RNA.seq.sh` pseudoaligns and quantifies RNA seq data to fasta files using Kallisto
+ 
+ - `./TPM.csv.creation.sh` creates one file with expression data from all samples
+ 
+ 8) Mapped Reads Quality Control http://lauren-blake.github.io/Reg_Evo_Primates/analysis/index.html
+ 
+ - Use BioMart in ensembl to get the gene names and chromosomal locations of all genes
+ 
+ 
+ 
+ Finding Bad samples:
+ 
+ - FASTQC
+ 
+ - % mapped to transcriptome
+ 
+ - sequencing depth/density
+ 
+ - GC across samples
+ 
+ QC:
+ 
+ - eliminate mitochondrial genes
+ 
+ - eliminate all genes not expressed at all in all samples
+ 
+ - sqrt transform TPM values b/c should not log transform ratio measurements  and one should sqrt transform when variance ~ mean
+ 
+ -
 
 #################################################################################
 

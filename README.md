@@ -1,5 +1,7 @@
-## The following pipeline is adapted from Brawand et al 2011 (http://www.ncbi.nlm.nih.gov/pubmed/22012392)'s pipeline obtained from Anamaria Necsulea
-## Erin Fry (efry@uchicago.edu) in the Lynch Laboratory at the University of Chicago has modified the pipeline
+## The code in this repository pseudoaligns RNA seq orthologous exons from Human, Chimpanzee, Bonobo, Gorilla, Orangutan, and Macaque
+
+### Steps 1-5 are adapted from Brawand et al 2011 (http://www.ncbi.nlm.nih.gov/pubmed/22012392)'s pipeline obtained from Anamaria Necsulea
+### Steps 5.5 + were written by Erin Fry (efry@uchicago.edu), Lynch Laboratory at the University of Chicago has modified
 
 #################################################################################
 
@@ -74,7 +76,7 @@ The scripts are divided in the following "modules" (in order of usage):
 
  - check exon alignments by  computing % sequence identity `./compute.percentage.identity.sh`
  
-  ### EF written code starts here
+  ### EF's code starts here
  
  - reorganize extract aligned exon sequences by species, not 1-1 ortho gene `./reorganize.by.species.sh Human`
  

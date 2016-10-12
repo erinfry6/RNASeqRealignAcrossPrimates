@@ -1,7 +1,7 @@
 path="/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning/" ##full absolute path to main directory
 pathData=paste(path,"results/",sep="")
 pathRaw=paste(pathData,"RawGeneExpression/",sep="")
-pathResults=paste(path,"results/","RawGeneExpression",sep="")
+pathResults=paste(path,"results/","QualityControl",sep="")
 
 setwd(pathRaw)
 ldf <- list() # creates a list

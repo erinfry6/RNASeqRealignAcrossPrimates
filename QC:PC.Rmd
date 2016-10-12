@@ -1,0 +1,191 @@
+---
+title: "QC"
+author: "Erin Fry"
+date: "October 12, 2016"
+output: html_document
+---
+##This exploratory file aims to identify the technical variables to control for in my analysis of frontal cortex transcriptomes of humans, bonobos, chimpanzees, gorillas, orangutans, and macaques
+
+
+```{r setup}
+library(knitr)
+## first set the directories 
+opts_knit$set(root.dir ="/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning/") ##full absolute path to main directory
+path="/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning/"
+pathresults=paste(path,"results/",sep="")
+pathAbundance=paste(pathresults,"RawGeneExpression/",sep="")
+pathdata=paste(path,"data/",sep="")
+pathResults=paste(pathresults,"QualityControl/",sep="")
+
+setwd(pathAbundance)
+```
+
+```{r read in pseudoaligned counts and sample info}
+ldf <- list() # creates a list
+listcsv<-as.character(dir(pattern="*")) # creates the list of all the csv files in the directory in true (not computer) numerical order
+
+## sum the est_counts column of each abundance.tsv file
+
+SampleInfo<-read.table(paste(pathdata,"SampleInformation.txt",sep=""),sep='\t',header=TRUE)
+SampleInfo<-SampleInfo[order(SampleInfo$SampleID),]
+SampleInfo$SampleID==listcsv
+
+```
+
+
+### create file with sample covariates and pseudoaligned mapped and unmapped reads
+```{r view sample table, echo=F}
+head(SampleInfo)
+
+```
+
+### How many total mapped, unmapped, and raw reads are there in each sample?
+
+```{r create bar charts for each sample,echo=F}
+library(ggplot2)
+library(scales)
+
+ggplot(SampleInfo, aes(x = factor(SampleID), y = Unmapped_reads, fill = Species)) + 
+  geom_bar(stat = "identity", colour = "black") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  xlab("Sample") + ylab("Number of unmapped reads") + 
+  ggtitle("Number of Unmapped reads for all samples (RNA-seq)") + 
+  scale_y_continuous(labels=comma)
+
+
+ggplot(SampleInfo, aes(x = factor(SampleID), y = Mapped_Reads, fill = Species)) + 
+  geom_bar(stat = "identity", colour = "black") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  xlab("Sample") + ylab("Number of mapped reads") + 
+  ggtitle("Number of Mapped reads for all samples (RNA-seq)") + 
+  scale_y_continuous(labels=comma)
+
+ggplot(SampleInfo, aes(x = factor(SampleID), y = Proportion_mapped_reads, fill = Species)) + 
+  geom_bar(stat = "identity", colour = "black") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  xlab("Sample") + ylab("Proportion of Mapped Reads") + 
+  ggtitle("Proportion of Reads Mapped for all samples (RNA-seq)") + 
+  scale_y_continuous(labels=comma)
+
+```
+
+
+### What are the sqrt(TPM) distributions for each sample?
+
+```{r upload the RNA seq pseudoaligned data}
+setwd(pathResults)
+
+raw_abun<-(read.delim("Transcript_Abundances.txt"))
+first_col_with_values<-4
+raw_abun_sqrt<-cbind(raw_abun[,1:(first_col_with_values-1)],sqrt(raw_abun[,first_col_with_values:ncol(raw_abun)]))
+
+```
+
+
+
+## Define at TPM cutoff for genes known to be not be expressed in the brain
+
+```{r upload and merge taus}
+## using Tau's, a measurement of tissue-specific expression defined in Yanai et al 2005, calculated based on Fagerberg et al 2013 tissue expression data, I will find a TPM cutoff for genes that are not expressed in the brain. 
+
+## upload the data and match by Ensembl gene ID. Create two new columns for the Taus and relative brain expression
+taus<-read.table(paste(pathdata,"taus.txt",sep=""),sep='\t',header=T)
+raw_abun$tau<-(taus$Tau[match(raw_abun$Human_Ortho_EnsemblID,taus$Ensembl.gene.id)])
+raw_abun$rel_brain<-(taus$brain_relative[match(raw_abun$Human_Ortho_EnsemblID,taus$Ensembl.gene.id)])
+
+library(dplyr)
+## filter only the genes with high tissue specific expression, and low expression in the brain (high relative brain expression would defeat the purpose of finding genes not expressed in the brain)
+greaterninty<-filter(raw_abun,tau>0.9,rel_brain<0.2,Chromosome!='MT')
+
+hist(greaterninty[,4],breaks=100000,xlim=c(0,10), main="TPM of Genes not generally expressed in the brain", xlab="Transcripts per Million", ylab="Number of genes")
+for (i in (first_col_with_values+1):(ncol(greaterninty)-2)){
+  hist(greaterninty[,i],breaks=100000,xlim=c(0,10),add=T)
+
+}
+
+abline(v=0.2,col="red")
+
+apply(greaterninty[first_col_with_values:25],2,function(x) length(which(x<.2))/nrow(greaterninty))
+
+
+```
+
+
+
+
+```{r visiualize the RNA seq data}
+## set the expression cutoff to sqrt(0.2 TPM
+expr_cutoff=sqrt(0.2)
+
+for (i in first_col_with_values:ncol(raw_abun_sqrt)){
+    hist(raw_abun_sqrt[,i], main=paste("sqrt(TPM) values in unfiltered data ",colnames(raw_abun_sqrt)[i],sep = ""), xlab = "sqrt(TPM)", breaks = 1000, xlim=c(0,10))
+    abline(v = expr_cutoff, col = "red", lwd = 3)
+}
+
+```
+*All samples seem to follow the same general distribution expression*
+
+### Filter lowely expressed (expressed below sqrt(TPM) of `r expr_cutoff` in all samples) and mitochondrial genes
+```{r remove lowely expressed and mitochondrial genes}
+
+## first filter genes expressed below our expr_cutoff in all samples
+raw_abun_sqrt_expressed<- raw_abun_sqrt[rowSums(raw_abun_sqrt[first_col_with_values:ncol(raw_abun_sqrt)])>((ncol(raw_abun_sqrt)-first_col_with_values+1)*expr_cutoff),]
+
+## how many genes are not expressed in any of the samples
+nrow(raw_abun_sqrt[rowSums(raw_abun_sqrt[first_col_with_values:ncol(raw_abun_sqrt)])<((ncol(raw_abun_sqrt)-first_col_with_values+1)*expr_cutoff),])
+
+
+## filter out mitochondiral genes
+raw_abun_sqrt_expressed_nomit<-raw_abun_sqrt_expressed[raw_abun_sqrt_expressed$Chromosome!='MT',]
+
+```
+
+
+```{r check the distributions now}
+for (i in first_col_with_values:ncol(raw_abun_sqrt_expressed)){
+    hist(raw_abun_sqrt_expressed_nomit[,i], main=paste("sqrt(TPM) values in filtered data ",colnames(raw_abun_sqrt)[i],sep = ""), xlab = "sqrt(TPM)", breaks = 1000, xlim=c(0,10))
+    abline(v = expr_cutoff, col = "red", lwd = 3)
+}
+```
+
+
+## Is there bias by species or sample for overrespresentation of non-expressed genes?
+
+```{r species biases?}
+
+## specify which columns are in each species
+gorilla=4:5
+human=6:11
+macaque=12:14
+bonobo=15:17
+orangutan=18:19
+chimp=20:25
+
+species<-c("gorilla","human","macaque","bonobo","orangutan","chimp")
+
+expornot<-data.frame(raw_abun_sqrt[,1:3])
+expornot$gorilla<-rowSums(raw_abun_sqrt[,gorilla])>(length(gorilla)*expr_cutoff)
+expornot$human<-rowSums(raw_abun_sqrt[,human])>(length(human)*expr_cutoff)
+expornot$macaque<-rowSums(raw_abun_sqrt[,macaque])>(length(macaque)*expr_cutoff)
+expornot$bonobo<-rowSums(raw_abun_sqrt[,bonobo])>(length(bonobo)*expr_cutoff)
+expornot$orangutan<-rowSums(raw_abun_sqrt[,orangutan])>(length(orangutan)*expr_cutoff)
+expornot$chimp<-rowSums(raw_abun_sqrt[,chimp])>(length(chimp)*expr_cutoff)
+
+genesnotexpressed<-apply(expornot[first_col_with_values:ncol(expornot)],2, function(x) length(which(x=="FALSE")))
+
+par(las=1)
+plot(genesnotexpressed, pch = 16, ylab = "Number of Genes with TPM< 0.2 in all samples", xlab = "Species", xaxt = 'n', main = "Number of genes Not expressed in each species")
+axis(side = 1, at = 1:6,labels = labels(genesnotexpressed))
+
+## How many genes are not expressed per sample?
+
+expornotsample<-cbind(raw_abun_sqrt[,1:3],apply(raw_abun_sqrt[first_col_with_values:ncol(raw_abun_sqrt)],2,function(x) x> expr_cutoff))
+
+genesnotexpressed_sample<-apply(expornotsample[first_col_with_values:ncol(expornotsample)],2, function(x) length(which(x=="FALSE")))
+
+plot(genesnotexpressed_sample, pch = 16, ylab = "Number of Genes with TPM< 0.2 in each samples", xlab = "", xaxt = 'n', main = "Number of genes not expressed in each sample")
+axis(side = 1, at = 1:length(genesnotexpressed_sample),labels = labels(genesnotexpressed_sample),las=2)
+
+
+```
+

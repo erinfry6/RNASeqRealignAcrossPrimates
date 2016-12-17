@@ -12,7 +12,7 @@ Create mart.export.txt file containing the EnsemblID, associated gene name, and 
 
 
 ```{r set directories}
-path="/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning/" ##full absolute path to main directory
+path="/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning/" ##full absolute path to main directory
 pathresults=paste(path,"results/",sep="")
 pathdata=paste(path,"data/",sep="")
 pathResults=paste(pathresults,"QualityControl/",sep="")
@@ -36,7 +36,119 @@ TPM_raw$Human_Ortho_EnsemblID[which(!TPM_raw$Human_Ortho_EnsemblID %in% geneinfo
 geneinfo<-read.table(paste(pathdata,"mart_export.txt",sep=""),header=TRUE,sep='\t',na.strings='NA',stringsAsFactors = FALSE)
 
 TPM_raw<-cbind(TPM_raw[,1],geneinfo[,c(2,3)],TPM_raw[,-1])
+colnames(TPM_raw)<-c('EnsemblID',colnames(TPM_raw)[-1])
 
+```
+
+```{r Top 100 GTEX expressed genes}
+## comparing the human samples to GTEX top 100 expressed genes in the frontal cortex n=92
+GTEX<-read.csv("GTExTop100Frontal.csv",header=T)
+
+## pull the TPMs of these genes from our samples
+library(dplyr)
+TopGTEXindata<-filter(TPM_raw,EnsemblID %in% GTEX$Gencode.Id)
+
+
+## visualize the raw counts per gene for all genes or the top expressed genes
+
+## boxplots of all and top genes for each human sample
+boxplot(log(TPM_raw[,6:11]),ylim=c(-5,12), main="log(Raw TPM All Genes) Human Samples, n=13321")
+boxplot(log(TopGTEXindata[,6:11]),ylim=c(-5,12), main="log(TPM Top GTEX Genes) Human Samples, n=46")
+
+## density plots for raw read counts for all and top for each human sample
+plotDensities(log(TPM_raw[,6:11]), legend="topright",main="log(Raw TPM All Genes) Densities, n=13321")
+
+plotDensities(log(TopGTEXindata[,6:11]), legend="topright",main="log(Raw TPM Top GTEX Genes) Densities, n=46")
+
+## Plot Densities for all samples, not just humans
+plotDensities(log(TPM_raw[,4:25]),col=categoricalData, legend="topright",main="log(Raw TPM All Genes) Densities, n=13321")
+
+plotDensities(log(TopGTEXindata[,4:25]), col=categoricalData,legend="topright",main="log(Raw TPM Top GTEX Genes) Densities, n=46")
+
+## boxplots for all samples, not just humans, on one chart
+boxplot(log(TPM_raw[,4:25]),ylim=c(-5,12), main="log(Raw TPM per Gene), blue=Top GTEX Genes in Humans")
+boxplot(log(TopGTEXindata[,4:25]),ylim=c(-5,12), add=T, col="blue")
+
+
+
+## quantify the significance of the differences in expression between the top 100 in my data set, and all genes in my dataset
+
+## find the median expression of each gene in all humans in our dataset
+TPM_raw$MedianHuman<-apply(TPM_raw[,c(6:11)],1,median)
+
+## find the median of GTEX gene in all humans
+TopGTEXindata$MedianHuman<-apply(TopGTEXindata[,c(6:11)],1,median)
+
+## is the median expression in humans sig dif in the top expressed GTEX genes than all genes?
+t.test(TopGTEXindata$MedianHuman,TPM_raw$MedianHuman,alternative = "greater")
+
+```
+
+
+```{r All GTEX Rankings}
+GtexMedians<-read.delim("GTEx_Analysis_v6p_RNA-seq_RNA-SeQCv1.1.8_gene_median_rpkm.gct",header=F)[-c(1,2,3),c(1,15)]
+colnames(GtexMedians)<-c("EnsemblID","RPKM")
+write.table(GtexMedians,"GTex_Medians_Frontal_Cortex.txt",sep='\t')
+## remove splice variant details
+GtexMedians<-read.table("Gtex_Medians_Frontal_Cortex.txt",header=T)
+
+
+## if already no duplicates, continue
+length(unique(GtexMedians$EnsemblID))==length((GtexMedians$EnsemblID))
+
+## there are not duplicates so, we move right to eliminating the GTEX genes not in our dataset
+GtexMedians_inDS<- GtexMedians[GtexMedians$EnsemblID %in% TPM_raw$EnsemblID,]
+
+## find the median expression of each gene in all humans in our dataset
+TPM_raw$MedianHuman<-apply(TPM_raw[,c(6:11)],1,median)
+TPM_raw$MedianAll<-apply(TPM_raw[,4:25],1,median)
+TPM_raw$HumanRank<-rank(TPM_raw$MedianHuman,ties.method = "first")
+TPM_raw$AllRank<-rank(TPM_raw$MedianAll,ties.method = "first")
+
+## ranking the Gtex and Our data
+GtexMedians_inDS$rank<-rank(GtexMedians_inDS$RPKM,ties.method = "first")
+GtexMedians_inDS<-GtexMedians_inDS[order(GtexMedians_inDS$EnsemblID),]
+GtexMedians_inDS$HumanRank<-select(filter(TPM_raw,EnsemblID %in% GtexMedians_inDS$EnsemblID),HumanRank)
+GtexMedians_inDS$AllRank<-select(filter(TPM_raw,EnsemblID %in% GtexMedians_inDS$EnsemblID),AllRank)
+
+## visualize rank matching between GTEX and our data in humans
+p<-ggplot(data=GtexMedians_inDS, mapping=aes(x=HumanRank,y=rank)) + 
+  theme_bw() +
+  theme(plot.title= element_text(size=20, face="bold"), axis.title.x=element_text(size=20),axis.title.y=element_text(size=20)) +
+  ggtitle("Comparative Rank in our Dataset to GTEX") +
+  labs( x="Brawand Dataset Raw Median Expression Rank", y="GTEX Median Expression Rank", face="bold", size=20) +
+  geom_point(colour="#333333", alpha=0.3) +
+  geom_abline(intercept=0,slope=1) +
+  geom_vline(xintercept=1200, alpha=.5) + geom_hline(yintercept=1200, alpha=0.5)
+p
+
+## is the rank sig dif?
+cor.test(as.numeric(GtexMedians_inDS$HumanRank),as.numeric(GtexMedians_inDS$rank),type="Spearman")
+
+## defining the not expressed cutoff?
+filter(GtexMedians_inDS, HumanRank<1200, rank<1200)
+
+
+
+
+
+
+## look at the rank comparisons between humans and all species for fun
+p<-ggplot(data=TPM_raw, mapping=aes(x=HumanRank,y=AllRank)) + 
+  theme_bw() +
+  theme(plot.title= element_text(size=20, face="bold"), axis.title.x=element_text(size=20),axis.title.y=element_text(size=20)) +
+  #ggtitle("Ancestral Transcript Levels and\n Evidence for Evolution on the Human Lineage") +
+  geom_point(colour="#333333", alpha=0.3) +
+  geom_abline(intercept=0,slope=1) +
+  geom_vline(xintercept=0.2, alpha=.5) + geom_hline(yintercept=0.2, alpha=0.5)
+p
+
+
+
+
+```
+
+```{r eliminate MT and prep for analysis}
 #be sure that there are no mitochondrial genes
 
 #make sure to eliminate all Mitochondrial genes, then get rid of the Chromosome.Name column
@@ -52,21 +164,15 @@ TPM_noMT <- TPM_noMT[-nrow(TPM_noMT),-1]
 ## remove rows containing gene names and chromosomes for PCA
 
 TPM_noMT_PCA<-TPM_noMT[,3:ncol(TPM_noMT)]
-
-#make sure only taking genes with >0 TPM expression level
-TPM_noMT_PCA_expressed<- TPM_noMT_PCA[rowSums(TPM_noMT_PCA)>44,]
-
-
-##Square root transform the data
-TPM_noMT_PCA_expressed_sqrt<-sqrt(TPM_noMT_PCA_expressed)
+TPM_noMT_PCA_sqrt<-sqrt(TPM_noMT_PCA)
 
 ```
 
-
-```{r}
+```{r PCA, Clustering, Density plots}
+## PC analysis function from Lauren Blake
 plot_scores <- function(pca, scores, n, m, cols, points=F, pchs =20, legend=F){
   xmin <- min(scores[,n]) - (max(scores[,n]) - min(scores[,n]))*0.05
-  if (legend == T){ ## let some room (35%) for a legend                                                                                                                                                 
+  if (legend == T){ ## let some room (35%) for a legend                         
     xmax <- max(scores[,n]) + (max(scores[,n]) - min(scores[,n]))*0.50
   }
   else {
@@ -74,7 +180,7 @@ plot_scores <- function(pca, scores, n, m, cols, points=F, pchs =20, legend=F){
   }
   ymin <- min(scores[,m]) - (max(scores[,m]) - min(scores[,m]))*0.05
   ymax <- max(scores[,m]) + (max(scores[,m]) - min(scores[,m]))*0.05
-  plot(scores[,n], scores[,m], xlab=paste("PC", n, ": ", round(summary(pca)$importance[2,n],3)*100, "% variance explained", sep=""), ylab=paste("PC", m, ": ", round(summary(pca)$importance[2,m],3)*100, "% variance explained", sep=""), main="PCA of Brain Transcription in Primates", xlim=c(xmin, xmax), ylim=c(ymin, ymax), type="n")
+  plot(scores[,n], scores[,m], xlab=paste("PC", n, ": ", round(summary(pca)$importance[2,n],3)*100, "% variance explained", sep=""), ylab=paste("PC", m, ": ", round(summary(pca)$importance[2,m],3)*100, "% variance explained", sep=""), main="PCA of Raw Primate Frontal Cortex RNA-Seq data", xlim=c(xmin, xmax), ylim=c(ymin, ymax), type="n")
   if (points == F){
     text(scores[,n],scores[,m], rownames(scores), col=cols, cex=1)
   }
@@ -83,36 +189,80 @@ plot_scores <- function(pca, scores, n, m, cols, points=F, pchs =20, legend=F){
   }
 }
 
+## set the colors for each sample
 categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "hsa.br.M.4"="blue", "hsa.br.M.5"="blue","mml.br.F.1"="orange", "mml.br.M.2"="orange", "mml.br.M.1"="orange", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
 
+## make PC figures function
+plot_PCs <- function(pca,firstPC,lastPC){
+  pca_genes<-prcomp(pca, scale=F)
+  scores<-pca_genes$x
+    for (n in (firstPC-1):(lastPC-2)){
+     n=n+1
+   plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
+} }
 
-#plot PCs for this exp data
-pca_genes<-prcomp(t(TPM_noMT_PCA_expressed_sqrt), scale=F)
-scores<-pca_genes$x
+## make PC figures from desired first PC to last PC
+plot_PCs(t(TPM_noMT_PCA_sqrt),1,5)
 
-#Plot PC 1 and 2
-for (n in 1:1){
-  plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
-}
-# 3 and 4
-for (n in 3:3){
-  plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
-}
-# 5 and 6
-for (n in 5:5){
-  plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
-}
+# Clustering (original code from Julien Roux)
+cors <- cor(TPM_noMT_PCA_sqrt, method="spearman", use="pairwise.complete.obs")
 
+library(gplots)
+library(RColorBrewer)
 
+## Load color scale for Heatmap
+colors <- colorRampPalette(c(brewer.pal(9, "Blues")[1],brewer.pal(9, "Blues")[9]))(100)
 
-plotDensities(TPM_noMT_PCA_expressed_sqrt, col=categoricalData, legend="topright")
-plotDensities(TPM_noMT_PCA_expressed_sqrt[,8], col=categoricalData, legend="topright")
-plotDensities(TPM_noMT_PCA_expressed_sqrt[,9], col=categoricalData, legend="topright")
-plotDensities(log(TPM_noMT_PCA_expressed), col=categoricalData, legend="topright")
+## make the heatmap
+heatmap.2( cors, scale="none",margins = c(12, 12), col=colors, trace='none', denscol="white", labCol=colnames(cors), ColSideColors=categoricalData, RowSideColors=categoricalData, cexCol = 0.2 + 1/log10(15), cexRow = 0.2 + 1/log10(15))
+
+## Examine Raw Counts for each gene as a density plot
+library(limma)
+
+plotDensities(TPM_noMT_PCA_sqrt, col=categoricalData, legend="topright",main="sqrt(Raw Counts per Gene) Densities")
+plotDensities(log(TPM_noMT_PCA), col=categoricalData, legend="topright", main="log(Raw Counts per Gene) Densities")
 
 
+```
 
-plotDensities(normalizeBetweenArrays(TPM_noMT_PCA_expressed_sqrt), col=categoricalData, legend="topright")
+
+
+```{r Remove Lowly expressed in all sample genes}
+## make sure only examining genes expressed in your tissue of interest based on TPM cutoff
+cutoff=2 ## set your cutoff
+TPM_noMT_PCA_expressed<- TPM_noMT_PCA[rowSums(TPM_noMT_PCA)>(cutoff*ncol(TPM_noMT_PCA)),]
+
+
+##Square root transform the data
+TPM_noMT_PCA_expressed_sqrt<-sqrt(TPM_noMT_PCA_expressed)
+
+```
+
+
+```{r PCA, Clustering, Density plots}
+
+## make PC figures from desired first PC to last PC
+plot_PCs(t(TPM_noMT_PCA_expressed_sqrt),1,5)
+
+# Clustering (original code from Julien Roux)
+cors <- cor(TPM_noMT_PCA_expressed_sqrt, method="spearman", use="pairwise.complete.obs")
+
+## make the heatmap
+heatmap.2( cors, scale="none",margins = c(12, 12), col=colors, trace='none', denscol="white", labCol=colnames(cors), ColSideColors=categoricalData, RowSideColors=categoricalData, cexCol = 0.2 + 1/log10(15), cexRow = 0.2 + 1/log10(15))
+
+## Examine Raw Counts for each gene as a density plot
+library(limma)
+
+plotDensities(TPM_noMT_PCA_expressed_sqrt, col=categoricalData, legend="topright",main="sqrt(Raw Counts per Gene) Densities")
+plotDensities(log(TPM_noMT_PCA_expressed), col=categoricalData, legend="topright", main="log(Raw Counts per Gene) Densities")
+
+
+```
+
+
+
+
+```{r}
 
 library("EDASeq")
 

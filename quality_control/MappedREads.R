@@ -10,7 +10,7 @@ listcsv<-as.character(dir(pattern="*")) # creates the list of all the csv files 
 
 ## sum the est_counts column of each abundance.tsv file
 
-SampleInfo<-read.table(paste(pathdata,"/SampleInformation.txt",sep=""),sep='\t',header=TRUE)
+SampleInfo<-read.table(paste(pathdata,"SampleInformation.txt",sep=""),sep='\t',header=TRUE)
 SampleInfo<-SampleInfo[order(SampleInfo$SampleID),]
 SampleInfo$SampleID==listcsv
 
@@ -27,7 +27,7 @@ SampleInfo$Proportion_mapped_reads<-SampleInfo$Mapped_Reads/SampleInfo$Raw_reads
 SampleInfo$Unmapped_reads<-SampleInfo$Raw_reads-SampleInfo$Mapped_Reads
 SampleInfo$Proportion_unmapped_reads<-SampleInfo$Unmapped_reads/SampleInfo$Raw_reads
 
-write.table(SampleInfo,"Sampleinfo.txt",sep='\t')
+write.table(SampleInfo,(paste(pathdata,"SampleInformation.txt",sep="")),sep='\t')
 
 head(SampleInfo)
 

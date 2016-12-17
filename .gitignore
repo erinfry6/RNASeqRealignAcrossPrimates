@@ -7,3 +7,5 @@ tba_alignments/.Rhistory
 kallisto/
 get_ensembl_annotations/species_scripts/
 .Rproj.user
+get_ensembl_annotations/.DS_Stor
+*DS_Store

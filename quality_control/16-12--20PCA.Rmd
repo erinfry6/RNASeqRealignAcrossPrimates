@@ -1,0 +1,346 @@
+---
+title: "PCA and Quality Control of Brawand et al RNA Seq data"
+author: "Erin Fry"
+date: "August 3 2016"
+output:
+  html_document:
+    toc: true
+    theme: cerulean
+    highlight: espresso
+    fig_width: 8
+    fig_height: 6
+    self_contained: false
+---
+
+Special thanks Lauren Blake and her pipeline (http://lauren-blake.github.io/Reg_Evo_Primates/analysis/) modified below.
+
+## Generate transcript abundance file using alignment and quantification pipeline found  at 
+#### https://github.com/erinfry6/RNASeqRealignAcrossPrimates 
+#### You will also need to 
+##### 1) Add EnsemblID, associated gene name, and chromosomal location using ensembl > biomart, filter with gene IDs, attributes gene ID, associated gene name and chromosome, click results. Add this information into the Transcripts.txt file in path/results/qualitycontrol directory. Save as 'Transcripts.txt'
+##### 2) obtain GTEX tissue expression data and save it to the results/qualitycontrol directory
+
+
+```{r set directories and load libraries, include=FALSE, warning=FALSE}
+## Load paths and libraries
+
+path="/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning/" ##full absolute path to main directory
+pathresults=paste(path,"results/",sep="")
+pathdata=paste(path,"data/",sep="")
+pathResults=paste(pathresults,"qualitycontrol/",sep="")
+
+library(dplyr)
+library(limma)
+library(ggplot2)
+library(gplots)
+library(RColorBrewer)
+library(scales)
+library(edgeR)
+library(R.utils)
+library(plyr)
+library(statmod)
+```
+
+```{r Load data, include=FALSE}
+setwd(pathResults)
+TPM_raw<-read.table("Transcript_Abundances.txt", header=TRUE, sep="\t", na.strings='NA', stringsAsFactors = FALSE)
+
+## upload gene information
+geneinfo<-read.table(paste(pathdata,"mart_export.txt",sep=""),header=TRUE,sep='\t',na.strings='NA',stringsAsFactors = FALSE)
+
+
+## if there are any EnsemblIDs without a match in biomart, find their chromosomal location and gene name online
+TPM_raw$Human_Ortho_EnsemblID[which(!TPM_raw$Human_Ortho_EnsemblID %in% geneinfo$Ensembl.Gene.ID)]
+
+## reload mart_export.txt with any modifications
+
+#geneinfo<-read.table(paste(pathdata,"mart_export.txt",sep=""),header=TRUE,sep='\t',na.strings='NA',stringsAsFactors = FALSE)
+
+TPM_raw<-cbind(TPM_raw[,1],geneinfo[,c(2,3)],TPM_raw[,-1])
+colnames(TPM_raw)<-c('EnsemblID',colnames(TPM_raw)[-1])
+
+```
+
+
+```{r format and load GTEX data, include=FALSE}
+## format GTEX exression data and save, remove splice variant details, then reread into r
+#GtexMedians<-read.delim("GTEx_Analysis_v6p_RNA-seq_RNA-SeQCv1.1.8_gene_median_rpkm.gct",header=F)[-c(1,2,3),c(1,15)]
+#colnames(GtexMedians)<-c("EnsemblID","RPKM")
+#write.table(GtexMedians,"GTex_Medians_Frontal_Cortex.txt",sep='\t')
+
+setwd(pathResults)
+GtexMedians<-read.table("Gtex_Medians_Frontal_Cortex.txt",header=T)
+
+```
+
+## Examine the data files
+
+```{r look at the data files}
+## transcript abundances in data
+head(TPM_raw)
+
+## median expression level of all genes in GTEX
+head(GtexMedians)
+```
+
+# Compare Gene Expression Ranks between our dataset and GTEX
+
+```{r Examine Gene Expression Rank compared to GTEX}
+## Only compare genes that are present in our dataset (1-1 orthologs)
+GtexMedians_inDS<- GtexMedians[GtexMedians$EnsemblID %in% TPM_raw$EnsemblID,]
+
+## find the median expression of each gene in our dataset for humans and nonhuman primates
+TPM_raw$MedianHuman<-apply(TPM_raw[,c(6:11)],1,median)
+TPM_raw$MedianAll<-apply(TPM_raw[,c(4,5,12:25)],1,median)
+## determine the gene expression rank
+TPM_raw$HumanRank<-rank(TPM_raw$MedianHuman,ties.method = "first")
+TPM_raw$AllRank<-rank(TPM_raw$MedianAll,ties.method = "first")
+
+## determine the gene xpression rank in GTEX
+GtexMedians_inDS<-GtexMedians_inDS[order(GtexMedians_inDS$EnsemblID),]
+GtexMedians_inDS$rank<-rank(GtexMedians_inDS$RPKM,ties.method = "first")
+
+## include the ranks from our dataset in the Gtex dataframe
+GtexMedians_inDS$HumanRank<-as.vector(filter(TPM_raw,EnsemblID %in% GtexMedians_inDS$EnsemblID)$HumanRank)
+GtexMedians_inDS$AllRank<-as.vector(filter(TPM_raw,EnsemblID %in% GtexMedians_inDS$EnsemblID)$AllRank)
+
+## visualize gene expressoin in our humans and in GTEX
+ggplot(data=GtexMedians_inDS, mapping=aes(x=HumanRank,y=rank)) + 
+  theme_bw() +
+  theme(plot.title= element_text(size=20, face="bold"), axis.title.x=element_text(size=20),axis.title.y=element_text(size=20)) +
+  ggtitle("Comparative Gene Exp Rank in Humans") +
+  labs( x="Brawand Dataset Raw Median Expression Rank", y="GTEX Median Expression Rank", face="bold", size=20) +
+  geom_point(colour="#333333", alpha=0.3) +
+  geom_abline(intercept=0,slope=1) +
+  geom_vline(xintercept=1200, alpha=.5) + geom_hline(yintercept=1200, alpha=0.5)
+
+## defining the not expressed cutoff?
+#filter(GtexMedians_inDS, HumanRank<1200, rank<1200)
+
+## visualize ranks of human and non human gene expression in our dataset
+ggplot(data=TPM_raw, mapping=aes(x=HumanRank,y=AllRank)) + 
+  theme_bw() +
+  theme(plot.title= element_text(size=20, face="bold"), axis.title.x=element_text(size=20),axis.title.y=element_text(size=20)) +
+  ggtitle("Comparative Rank of Humans to non-Humans") +
+  labs( x="Human Rank", y="Non Human Rank", face="bold", size=20) +
+  geom_point(colour="#333333", alpha=0.3) +
+  geom_abline(intercept=0,slope=1) +
+  geom_vline(xintercept=0.2, alpha=.5) + geom_hline(yintercept=0.2, alpha=0.5)
+
+```
+
+**There is no statistically significant difference in rank between our dataset expression rank and the GTEX expression rank (Wilcox.test p-value= `r wilcox.test(GtexMedians_inDS$rank,GtexMedians_inDS$HumanRank)$p.value`) nor between humans and non humans in our dataset (p-value= `r wilcox.test(TPM_raw$HumanRank,TPM_raw$AllRank)$p.value`).**
+
+# Examine the top 100 most expressed genes in GTEX present in our dataset
+
+```{r Top 100 expressed genes in my DS defined by GTEX, warning=FALSE}
+## comparing the human samples to GTEX top 100 expressed genes in the frontal cortex n=92
+
+## create a dataframe with the top 100 most expressed genes in GTEX
+Top100Gtex<-GtexMedians_inDS %>% arrange(desc(rank)) %>% slice(1:100)
+
+## then create a dataframe with the information from our DS for those top 100 genes, expected to be the highest expressed in our human frontal cortex samples
+TopGTEXindata<-filter(TPM_raw,EnsemblID %in% Top100Gtex$EnsemblID)
+
+## visualize the raw counts per gene for all genes or the top expressed genes
+
+## boxplots of all and top genes for each human sample
+boxplot(log(TPM_raw[,6:11]),ylim=c(-5,12), main="log(Raw TPM All Genes) Human Samples, n=13321", ylab = "log(TPM)", las = 2, cex.axis = .75)
+boxplot(log(TopGTEXindata[,6:11]),ylim=c(-5,12), main="log(TPM Top GTEX Genes) Human Samples, n=46", ylab = "log(TPM)", las = 2, cex.axis = .75)
+
+## density plots for raw read counts for all and top for each human sample
+
+### set the colors for the samples
+categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "hsa.br.M.4"="blue", "hsa.br.M.5"="blue","mml.br.F.1"="orange", "mml.br.M.2"="orange", "mml.br.M.1"="orange", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
+
+## density plot of all genes in all humans
+plotDensities(log(TPM_raw[,6:11]), legend="topright",main="log(Raw TPM All Genes) Densities, n=13321")
+
+## compared to the top 100 genes in all humans
+plotDensities(log(TopGTEXindata[,6:11]), legend="topright",main="log(Raw TPM Top GTEX Genes) Densities, n=100")
+
+## Plot Densities for all samples, not just humans
+plotDensities(log(TPM_raw[,4:25]),col=categoricalData, legend="topright",main="log(Raw TPM All Genes) Densities, n=13321")
+
+plotDensities(log(TopGTEXindata[,4:25]), col=categoricalData,legend="topright",main="log(Raw TPM Top GTEX Genes) Densities, n=100")
+
+## boxplots for all samples, not just humans, on one chart
+boxplot(log(TPM_raw[,4:25]),ylim=c(-5,12), main="log(Raw TPM per Gene), blue=Top GTEX Genes in Humans", ylab = "log(TPM)", las = 2, cex.axis = .75)
+boxplot(log(TopGTEXindata[,4:25]),ylim=c(-5,12), add=T, col="blue", las = 2, cex.axis = .75)
+
+
+
+## quantify the significance of the differences in expression between the top 100 in my data set, and all genes in my dataset
+
+## find the median of GTEX gene in all humans
+TopGTEXindata$MedianHuman<-apply(TopGTEXindata[,c(6:11)],1,median)
+
+## is the median expression in humans sig dif in the top expressed GTEX genes than all genes?
+t.test(TopGTEXindata$MedianHuman,TPM_raw$MedianHuman,alternative = "greater")
+
+```
+
+**The genes most expressed in GTEX are significantly more expressed in my dataset: One-sided t-test p-value= `r t.test(TopGTEXindata$MedianHuman,TPM_raw$MedianHuman,alternative = "greater")$p.value`.**
+
+
+# Eliminate mitochondrial genes and lowly expressed genes
+```{r exclude mito genes, include=FALSE}
+# eliminate all Mitochondrial genes, then get rid of the Chromosome.Name column
+TPM_noMT<-filter(TPM_raw, Chromosome.Name !="MT")
+
+#make the row names
+rownames(TPM_noMT)<-TPM_noMT[,1]
+TPM_noMT <- TPM_noMT[-nrow(TPM_noMT),-1]
+
+## remove rows containing gene names and chromosomes for PCA
+
+TPM_noMT_PCA<-TPM_noMT[,3:(ncol(TPM_noMT)-4)]
+
+```
+
+## Define the expression TPM Cutoff
+**Fagerberg et al 2014 measured gene expression in 44 human tissues**
+**After converting FPKM to TPM, calculated Tau (the tissue specificity index: http://bioinformatics.oxfordjournals.org/content/21/5/650.long. http://bib.oxfordjournals.org/content/early/2016/02/17/bib.bbw008.full)**
+**Then take those genes with Tau>=0.90 and relative expression to the max of 0.1 and calculated their mean TPM in brain.**
+
+```{r Defining the Cutoff}
+## load Tau data from 
+setwd(pathdata)
+Taus<-read.table("BrainTaus.txt", header=T)
+
+## take a look at the data
+head(Taus)
+
+## The genes in the bottom right corner are genes deemd to be 'not expressed in the brain'
+plot(Taus$Tau,Taus$brain_relative_to_max, xlab="Tissue Specificity", ylab="Expression in Brain Relative to Max Expression")
+abline(h=.1,v=.9, col="red")
+
+## genes not expressed are those with high Tau (above 0.9) and low relative expression (below 0,1)
+Genes_not_exp_in_brain<-filter(Taus, Tau>0.9 & brain_relative_to_max<0.1)
+summary(Genes_not_exp_in_brain)[4,4]
+
+## given the mean is close to 2, and the literature generally use 2 as a TPM cutoff,
+cutoff<-2
+
+## the horizantal line is the cutoff for relative expression, and the vertical line is the TPM cutoff for expression
+plot(log(Taus$Brain_TPM),Taus$brain_relative_to_max, xlab="log(TPM)", ylab="Expression in Brain Relative to Max Expression")
+abline(h=.1,v=log(cutoff), col="red")
+
+## the horizantal line is the cutoff for tissue specificity, and the vertical is for expression
+plot(log(Taus$Brain_TPM),Taus$Tau, xlab="log(TPM)", ylab="Tissue Specificity")
+abline(h=.9,v=log(cutoff), col="red")
+
+hist(log(Genes_not_exp_in_brain$Brain_TPM), xlim=c(0,5), ylim=c(0,100),nclass=100, xlab="log(TPM)", ylab="Number of Genes", main="Distribution of log(TPM) for Genes Not Expressed")
+abline(v=log(cutoff), col="red")
+
+```
+
+**The mean TPM of genes not expressed in the brain is `r mean(Genes_not_exp_in_brain$Brain_TPM)`. TPM of 2 will therefor be used as a cutoff in our data**
+
+## Remove lowly expressed Genes for batch correction and square root the data
+```{r Filter lowly expressed Genes}
+#make sure only taking genes with >0 TPM expression level
+TPM_noMT_PCA_expressed<- TPM_noMT_PCA[rowSums(TPM_noMT_PCA)>2*ncol(TPM_noMT_PCA),]
+
+##Square root transform the data
+TPM_noMT_PCA_expressed_sqrt<-sqrt(TPM_noMT_PCA_expressed)
+
+```
+
+# Examine the PCs, Expression Densitiies, and Heatmap of the data before limma
+```{r Plot the PCs before batch correction}
+plot_scores <- function(pca, scores, n, m, cols, points=F, pchs =20, legend=F){
+  xmin <- min(scores[,n]) - (max(scores[,n]) - min(scores[,n]))*0.05
+  if (legend == T){ ## let some room (35%) for a legend                                                                                                                                                 
+    xmax <- max(scores[,n]) + (max(scores[,n]) - min(scores[,n]))*0.50
+  }
+  else {
+    xmax <- max(scores[,n]) + (max(scores[,n]) - min(scores[,n]))*0.05
+  }
+  ymin <- min(scores[,m]) - (max(scores[,m]) - min(scores[,m]))*0.05
+  ymax <- max(scores[,m]) + (max(scores[,m]) - min(scores[,m]))*0.05
+  plot(scores[,n], scores[,m], xlab=paste("PC", n, ": ", round(summary(pca)$importance[2,n],3)*100, "% variance explained", sep=""), ylab=paste("PC", m, ": ", round(summary(pca)$importance[2,m],3)*100, "% variance explained", sep=""), main="PCA of Brain Transcription in Primates", xlim=c(xmin, xmax), ylim=c(ymin, ymax), type="n")
+  if (points == F){
+    text(scores[,n],scores[,m], rownames(scores), col=cols, cex=1)
+  }
+  else {
+    points(scores[,n],scores[,m], col=cols, pch=pchs, cex=1.3)
+  }
+}
+
+## make PC figures function
+plot_PCs <- function(pca,firstPC,lastPC){
+  pca_genes<-prcomp(pca, scale=F)
+  scores<-pca_genes$x
+  for (n in (firstPC-1):(lastPC-2)){
+    n=n+1
+    plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
+  } }
+
+## make PC figures from desired first PC to last PC
+plot_PCs(t(TPM_noMT_PCA_expressed_sqrt),1,5)
+
+## examine expression density for each sample, check for normality
+plotDensities(log(TPM_noMT_PCA_expressed), col=categoricalData, legend="topright")
+
+# Clustering (original code from Julien Roux)
+cors <- cor(TPM_noMT_PCA_expressed_sqrt, method="spearman", use="pairwise.complete.obs")
+
+## Load color scale for Heatmap
+colors <- colorRampPalette(c(brewer.pal(9, "Blues")[1],brewer.pal(9, "Blues")[9]))(100)
+
+## make the heatmap
+heatmap.2( cors, scale="none",margins = c(12, 12), col=colors, trace='none', denscol="white", labCol=colnames(cors), ColSideColors=categoricalData, RowSideColors=categoricalData, cexCol = 0.2 + 1/log10(15), cexRow = 0.2 + 1/log10(15))
+
+``` 
+
+#Eliminate Samples
+**Based on the results of PCA, the heatmap, expression density curves, and top gene expression levels, I am eliminating hsa_br_M_4 from the dataset. hsa_br_M_5 will also be eliminated for it was taken from the Temporal lobe, not the frontal cortex or prefrontal cortex.**
+
+```{r load sampleinfo and eliminate bad samples}
+## load the sample data
+SampleInfo<-read.table(paste(pathdata,"SampleInformation.txt",sep=""),sep='\t',header=TRUE)
+head(SampleInfo)
+
+## examine the Samples and Tissues
+select(SampleInfo, SampleID,Tissue)
+
+## eliminate hsa_br_M_ 4 and 5 from SampleInfo and TPM_noMT_PCA_expressed_sqrt
+SampleInfo<-SampleInfo[-c(7,8),]
+TPM_noMT_PCA_expressed_sqrt_quality<-TPM_noMT_PCA_expressed_sqrt[,-c(7,8)]
+
+```
+
+# Normalize the data
+## Adjust for library size (via TMM)
+```{r}
+## use EdgeR to normalize samples, ensuring that a few highly expressed genes in some samples do not appear to be down regulation of other genes
+
+## Perform TMM (trimmed mean of M-values)
+## Create a DGEList object from a table of counts (rows=features, columns=samples), group indicator for each column, library size (optional) and a table of feature annotation (optional).
+dge<-DGEList(counts=TPM_noMT_PCA_expressed_sqrt_quality,lib.size=colSums(TPM_noMT_PCA_expressed_sqrt_quality))
+
+## Calculate Normalization scaling Factors that minimize the log-fold changes between samples for most genes
+dge<-calcNormFactors(dge)
+
+# Make sure my samples and DGEList object contain the same samples
+summary(colnames(TPM_noMT_PCA_expressed_sqrt_quality) %in% colnames(dge))
+
+```
+
+## Voom and cortift (with the cyclic loess normalizatoin)
+**Decouple the dependency between mean and variance. We will use corfit to model a within-individual term.
+
+```{r}
+## Voom requires a design matrix as input                                                                             
+design<-SampleInfo$Species  
+
+## Normalize the columns of a matrix, cyclicly applying loess normalization to normalize each pair of columns to each other.
+TPM.voom.cyclic<-voom(dge,design = model.matrix(~0 + SampleInfo$Species),normalize.method = "cyclicloess", plot=T)
+
+
+
+
+```
+
+**by Erin Fry, December 19 2016**

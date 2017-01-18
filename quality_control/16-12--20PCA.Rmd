@@ -21,7 +21,7 @@ Special thanks Lauren Blake and her pipeline (http://lauren-blake.github.io/Reg_
 ##### 2) obtain GTEX tissue expression data and save it to the results/qualitycontrol directory
 
 
-```{r set directories and load libraries, include=FALSE, warning=FALSE}
+```{r set directories and load libraries, warning=FALSE}
 ## Load paths and libraries
 
 path="/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning/" ##full absolute path to main directory
@@ -114,6 +114,8 @@ ggplot(data=GtexMedians_inDS, mapping=aes(x=HumanRank,y=rank)) +
   geom_abline(intercept=0,slope=1) +
   geom_vline(xintercept=1200, alpha=.5) + geom_hline(yintercept=1200, alpha=0.5)
 
+cor.test(GtexMedians_inDS$HumanRank,GtexMedians_inDS$rank)
+
 ## defining the not expressed cutoff?
 #filter(GtexMedians_inDS, HumanRank<1200, rank<1200)
 
@@ -126,6 +128,8 @@ ggplot(data=TPM_raw, mapping=aes(x=HumanRank,y=AllRank)) +
   geom_point(colour="#333333", alpha=0.3) +
   geom_abline(intercept=0,slope=1) +
   geom_vline(xintercept=0.2, alpha=.5) + geom_hline(yintercept=0.2, alpha=0.5)
+
+cor.test(GtexMedians_inDS$HumanRank,GtexMedians_inDS$AllRank)
 
 ```
 
@@ -154,10 +158,30 @@ boxplot(log(TopGTEXindata[,6:11]),ylim=c(-5,12), main="log(TPM Top GTEX Genes) H
 categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "hsa.br.M.4"="blue", "hsa.br.M.5"="blue","mml.br.F.1"="orange", "mml.br.M.2"="orange", "mml.br.M.1"="orange", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
 
 ## density plot of all genes in all humans
-plotDensities(log(TPM_raw[,6:11]), legend="topright",main="log(Raw TPM All Genes) Densities, n=13321")
+plotDensities(log(TPM_raw[,6:11]),main="log(Raw TPM All Genes) Densities, n=13321")
 
 ## compared to the top 100 genes in all humans
 plotDensities(log(TopGTEXindata[,6:11]), legend="topright",main="log(Raw TPM Top GTEX Genes) Densities, n=100")
+
+
+plot(density(log(TPM_raw[,6])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#6a3d9a", lwd=2, xlim=c(-5,12), ylim=c(0,.6), lty=6)
+lines(density(log(TPM_raw[,7])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#cab2d6", lwd=2, lty=6)
+lines(density(log(TPM_raw[,8])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#ff7f00", lwd=2, lty=6)
+lines(density(log(TPM_raw[,9])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#e31a1c", lwd=2, lty=6)
+lines(density(log(TPM_raw[,10])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#33a02c", lwd=2, lty=6)
+lines(density(log(TPM_raw[,11])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#1f78b4", lwd=2, lty=6)
+
+
+lines(density(log(TopGTEXindata[,6])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#6a3d9a", lwd=2, lty=1)
+lines(density(log(TopGTEXindata[,7])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#cab2d6", lwd=2, lty=1)
+lines(density(log(TopGTEXindata[,8])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#ff7f00", lwd=2, lty=1)
+lines(density(log(TopGTEXindata[,9])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#e31a1c", lwd=2, lty=1)
+lines(density(log(TopGTEXindata[,10])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#33a02c", lwd=2, lty=1)
+lines(density(log(TopGTEXindata[,11])),main="Expression Densities of Humans for All Genes, and Top 100",xlab="log(TPM)", col="#1f78b4", lwd=2, lty=1)
+
+legend(x=-4,y=.4, legend=c(colnames(TopGTEXindata[,6:11]),"All Genes"), col=c("#6a3d9a","#cab2d6","#ff7f00","#e31a1c","#33a02c","#1f78b4","black"), lwd=2,lty = c(1,1,1,1,1,1,6), bty="n")
+
+
 
 ## Plot Densities for all samples, not just humans
 plotDensities(log(TPM_raw[,4:25]),col=categoricalData, legend="topright",main="log(Raw TPM All Genes) Densities, n=13321")
@@ -182,11 +206,29 @@ t.test(TopGTEXindata$MedianHuman,TPM_raw$MedianHuman,alternative = "greater")
 
 **The genes most expressed in GTEX are significantly more expressed in my dataset: One-sided t-test p-value= `r t.test(TopGTEXindata$MedianHuman,TPM_raw$MedianHuman,alternative = "greater")$p.value`.**
 
+# Eliminate samples with poor quality, or with wrong sample tissue
+**Based on the results of PCA, the heatmap, expression density curves, and top gene expression levels, I am eliminating hsa_br_M_4 from the dataset. hsa_br_M_5 will also be eliminated for it was taken from the Temporal lobe, not the frontal cortex or prefrontal cortex.**
+```{r eliminate hsa_br_M_4 and 5, include=FALSE}
+## load the sample data
+SampleInfo<-read.table(paste(pathdata,"SampleInformation.txt",sep=""),sep='\t',header=TRUE)
+
+## examine the Samples and Tissues
+select(SampleInfo, SampleID,Tissue)
+
+## eliminate hsa M4 for bad quality and 5 for wrong tissue
+TPM_raw_elim<-TPM_raw[,-c(10,11)]
+
+## eliminate those from the SampleInfo file as well
+SampleInfo<-SampleInfo[-c(7:8),]
+
+## set sample colors
+categoricalData=c("ggo.br.F.1"="#0072B2", "ggo.br.M.1"="#0072B2","hsa.br.F.1"="blue", "hsa.br.M.1"="blue", "hsa.br.M.2"="blue", "hsa.br.M.3"="blue", "mml.br.F.1"="orange", "mml.br.M.2"="orange", "mml.br.M.1"="orange", "ppa.br.F.1"="#999999", "ppa.br.F.2"="#999999","ppa.br.M.1"="#999999","ppy.br.F.1"="red", "ppy.br.M.1"="red","ptr.br.F.1"="#56B4E9","ptr.br.M.1"="#56B4E9", "ptr.br.M.2"="#56B4E9", "ptr.br.M.3"="#56B4E9", "ptr.br.M.4"="#56B4E9", "ptr.br.M.5"="#56B4E9")
+```
 
 # Eliminate mitochondrial genes and lowly expressed genes
 ```{r exclude mito genes, include=FALSE}
 # eliminate all Mitochondrial genes, then get rid of the Chromosome.Name column
-TPM_noMT<-filter(TPM_raw, Chromosome.Name !="MT")
+TPM_noMT<-filter(TPM_raw_elim, Chromosome.Name !="MT")
 
 #make the row names
 rownames(TPM_noMT)<-TPM_noMT[,1]
@@ -240,7 +282,7 @@ abline(v=log(cutoff), col="red")
 ## Remove lowly expressed Genes for batch correction and square root the data
 ```{r Filter lowly expressed Genes}
 #make sure only taking genes with >0 TPM expression level
-TPM_noMT_PCA_expressed<- TPM_noMT_PCA[rowSums(TPM_noMT_PCA)>2*ncol(TPM_noMT_PCA),]
+TPM_noMT_PCA_expressed<- TPM_noMT_PCA[rowSums(TPM_noMT_PCA)>cutoff*ncol(TPM_noMT_PCA),]
 
 ##Square root transform the data
 TPM_noMT_PCA_expressed_sqrt<-sqrt(TPM_noMT_PCA_expressed)
@@ -282,6 +324,12 @@ plot_PCs(t(TPM_noMT_PCA_expressed_sqrt),1,5)
 
 ## examine expression density for each sample, check for normality
 plotDensities(log(TPM_noMT_PCA_expressed), col=categoricalData, legend="topright")
+## by species
+plotDensities(log(TPM_noMT_PCA_expressed[1:2]), legend="topright")
+plotDensities(log(TPM_noMT_PCA_expressed[7:9]), legend="topright")
+plotDensities(log(TPM_noMT_PCA_expressed[10:12]), legend="topright")
+plotDensities(log(TPM_noMT_PCA_expressed[13:20]), legend="topright")
+
 
 # Clustering (original code from Julien Roux)
 cors <- cor(TPM_noMT_PCA_expressed_sqrt, method="spearman", use="pairwise.complete.obs")
@@ -294,23 +342,6 @@ heatmap.2( cors, scale="none",margins = c(12, 12), col=colors, trace='none', den
 
 ``` 
 
-#Eliminate Samples
-**Based on the results of PCA, the heatmap, expression density curves, and top gene expression levels, I am eliminating hsa_br_M_4 from the dataset. hsa_br_M_5 will also be eliminated for it was taken from the Temporal lobe, not the frontal cortex or prefrontal cortex.**
-
-```{r load sampleinfo and eliminate bad samples}
-## load the sample data
-SampleInfo<-read.table(paste(pathdata,"SampleInformation.txt",sep=""),sep='\t',header=TRUE)
-head(SampleInfo)
-
-## examine the Samples and Tissues
-select(SampleInfo, SampleID,Tissue)
-
-## eliminate hsa_br_M_ 4 and 5 from SampleInfo and TPM_noMT_PCA_expressed_sqrt
-SampleInfo<-SampleInfo[-c(7,8),]
-TPM_noMT_PCA_expressed_sqrt_quality<-TPM_noMT_PCA_expressed_sqrt[,-c(7,8)]
-
-```
-
 # Normalize the data
 ## Adjust for library size (via TMM)
 ```{r}
@@ -318,13 +349,14 @@ TPM_noMT_PCA_expressed_sqrt_quality<-TPM_noMT_PCA_expressed_sqrt[,-c(7,8)]
 
 ## Perform TMM (trimmed mean of M-values)
 ## Create a DGEList object from a table of counts (rows=features, columns=samples), group indicator for each column, library size (optional) and a table of feature annotation (optional).
-dge<-DGEList(counts=TPM_noMT_PCA_expressed_sqrt_quality,lib.size=colSums(TPM_noMT_PCA_expressed_sqrt_quality))
+dge<-DGEList(counts=TPM_noMT_PCA_expressed_sqrt,lib.size=colSums(TPM_noMT_PCA_expressed_sqrt))
 
 ## Calculate Normalization scaling Factors that minimize the log-fold changes between samples for most genes
 dge<-calcNormFactors(dge)
+plot(dge$samples$lib.size)
 
 # Make sure my samples and DGEList object contain the same samples
-summary(colnames(TPM_noMT_PCA_expressed_sqrt_quality) %in% colnames(dge))
+summary(colnames(TPM_noMT_PCA_expressed_sqrt) %in% colnames(dge))
 
 ```
 
@@ -333,14 +365,14 @@ summary(colnames(TPM_noMT_PCA_expressed_sqrt_quality) %in% colnames(dge))
 
 ```{r}
 ## Voom requires a design matrix as input                                                                             
-design<-SampleInfo$Species  
+design<-SampleInfo$Species
 
 ## Normalize the columns of a matrix, cyclicly applying loess normalization to normalize each pair of columns to each other.
-TPM.voom.cyclic<-voom(dge,design = model.matrix(~0 + SampleInfo$Species),normalize.method = "cyclicloess", plot=T)
+TPM.voom.cyclic<-voom(dge,design = model.matrix(~0 + SampleInfo$Species ),normalize.method = "none", plot=T)
 
 
 
 
 ```
 
-**by Erin Fry, December 19 2016**
+**by Erin Fry, January 3rd 2017**

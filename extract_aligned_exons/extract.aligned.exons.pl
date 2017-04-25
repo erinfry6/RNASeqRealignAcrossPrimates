@@ -290,18 +290,21 @@ sub extractAlignedExons{
 		my $base=substr $aln->{$index}{$sp}{"sequence"}, $i, 1;
 
 		if($base ne "-"){
-		    ## this is not a gap, we update the position 
-		    ## no *last* here - we need to update it even if there are gaps in other species
-		    $alnpos{$sp}+=$increment{$sp};
+		    ## for each base, check if there is a gap, we update the position, and assign allungap=1 if no gap
+		    ## no *last* here - we need to update it even if there are gaps in other species, for each species and position
+		    	$alnpos{$sp}+=$increment{$sp};
 
-		    if(!(exists $hashcoords->{$sp}{$alnpos{$sp}})){
-			$allinexon=0;
-		    }
+						## if the base is not in a known exon based on annotation, allinexon=0
+		    	if(!(exists $hashcoords->{$sp}{$alnpos{$sp}})){
+					$allinexon=0;
+		    	}
 		}
+		
 		else{
 		    $allungap=0;
+		    	## if base is -, then it doesn't matter if the exon is in all species, just give allungap a 0, it seems to me that anything with a - is excluded, allowing no gaps
 		}
-	    }
+	}
 
 	    if($allinexon==1 && $allungap==1){
 		## these positions are all in exons, for each species 

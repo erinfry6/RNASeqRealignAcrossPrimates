@@ -1,18 +1,14 @@
 ##!/bin/bash
 
-## written by EF in July 2016
-## Download the RNA seq raw data from NCBI Geo : http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE30352
-## Convert the .sra RNA-seq files to .fastq files for analysis with Kallisto
-## ** requires SRA toolkit (brew install homebrew/science/sratoolkit  AND brew install fastqc) **
-## these are all primate brain samples
+## written by EF in April 2017
+## run fastqc (required) on all samples
 
 ##########################################################################################
 
-export path=/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning ##set base directory path
+export path=/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning ##set base directory path
 export pathExonFasta=${path}/results/aligned_exons_sequences_by_species
 export pathRNAseq=${path}/data/RNA_seq_raw
 export pathResults=${path}/results/FASTQC
-export pathScripts=${path}/scripts/download_RNAseq_files
 
 ##########################################################################################
 
@@ -27,12 +23,20 @@ cd ${pathRNAseq}
     echo $d results directory already here
     else
 	mkdir ${pathResults}/$d
+	echo "making directory for $d"
     fi
     
-		cd $d
-		fastqc *.fastq -o ${pathResults}/${d}/
-		cd ..
-	done
-	
-	
-cd ${pathScripts}
+cd $d
+if [ -e ${pathResults}/${d}/RNAseq_fastqc.html ]; then
+echo already did QC on $d
+elif [ -e ${pathResults}/${d}/RNAseq_2_fastqc.html ]
+then
+echo already did QC on $d
+else
+fastqc *.fastq -o ${pathResults}/${d}/
+fi
+
+cd ..
+
+done
+

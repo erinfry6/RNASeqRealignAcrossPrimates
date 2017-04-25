@@ -1,16 +1,16 @@
 ##!/bin/bash
 
-## written by EF in July 2016
+## written by EF in April 2017
 ## Pseudo-align and quantify the RNA-seq raw reads to the .fa files created in step 5
 ## ** requires Kallisto (brew install kallisto) **
 
 ##########################################################################################
 
-export path=/Users/lynchlab/Desktop/ErinFry/BrainTranscription/Realigning ##set base directory path
+export path=/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning ##set base directory path
 export pathExonFasta=${path}/results/aligned_exons_sequences_by_species
 export pathRNAseq=${path}/data/RNA_seq_raw
 export pathResults=${path}/results/RawGeneExpression
-export pathScripts=${path}/scripts/map_RNA_seq_data
+export pathScripts=${path}/scripts/get_transcript_abundances
 
 ##########################################################################################
 
@@ -23,8 +23,14 @@ cd ${pathExonFasta}
 for sp in *.fa
 	do
 	
-	echo Creating index file for ${sp}
-	kallisto index -i $sp.idx $sp
+if [ -e $sp.idx ]
+then already generated index f0r $sp
+
+else
+echo Creating index file for ${sp}
+kallisto index -i $sp.idx $sp
+
+fi
 	
 	if [ ${sp} = "Human.fa" ]; then
     	export name="hsa"
@@ -73,5 +79,20 @@ for sp in *.fa
     	
 	done
 done
+
+## make kmer directory, if did not specify kmer above, kmer is default 31
 	
+if [ -e kmer31 ]
+then kmer directory already exists
+
+else
+mkdir kmer31
+
+fi
+	
+
+## move abundance files to this directory
+mv * kmer31/*
+
+
 cd ${pathScripts}

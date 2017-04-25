@@ -1,6 +1,6 @@
 path="/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning/" ##full absolute path to main directory
 pathData=paste(path,"results/",sep="")
-pathRaw=paste(pathData,"RawGeneExpression/",sep="")
+pathRaw=paste(pathData,"RawGeneExpression/kmer31/",sep="")
 pathResults=paste(path,"results/","QualityControl",sep="")
 
 setwd(pathRaw)
@@ -22,4 +22,4 @@ for (k in 1:length(listcsv)){
 head(Abundances)
 
 setwd(pathResults)
-write.table(Abundances,"Transcript_Abundances.txt", sep="\t",row.names=FALSE,col.names=TRUE)
+write.table(Abundances,"Transcript_Abundances31.txt", sep="\t",row.names=FALSE,col.names=TRUE)

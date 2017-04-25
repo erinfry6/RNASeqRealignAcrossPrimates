@@ -9,3 +9,7 @@ get_ensembl_annotations/species_scripts/
 .Rproj.user
 get_ensembl_annotations/.DS_Stor
 *DS_Store
+*/*DS_Store
+map_RNA_seq_data
+*.Rhistory
+*/*.Rhistory

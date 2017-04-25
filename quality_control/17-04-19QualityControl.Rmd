@@ -1,0 +1,435 @@
+---
+title: "PCA and Quality Control of Brawand et al RNA Seq data"
+author: "Erin Fry"
+date: "August 3 2016"
+output:
+  html_document:
+    toc: true
+    theme: cerulean
+    highlight: espresso
+    fig_width: 8
+    fig_height: 6
+    self_contained: false
+---
+
+Special thanks Lauren Blake and her pipeline (http://lauren-blake.github.io/Reg_Evo_Primates/analysis/) modified below.
+
+##Introduction
+**Generate transcript abundance file using alignment and quantification pipeline [found here](https://github.com/erinfry6/RNASeqRealignAcrossPrimates)**
+**You will also need to**
+
+**1) Add EnsemblID, associated gene name, and chromosomal location using ensembl > biomart, filter with gene IDs, attributes gene ID, associated gene name and chromosome, click results. Add this information into the Transcripts.txt file in path/results/qualitycontrol directory. Save as 'Transcripts.txt'**
+
+**2) obtain GTEX tissue expression data and save it to the results/qualitycontrol directory**
+
+
+```{r set directories and load libraries, warning=FALSE}
+## Load paths and libraries
+
+path="/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning/" ##full absolute path to main directory
+pathresults=paste(path,"results/",sep="")
+pathdata=paste(path,"data/",sep="")
+pathResults=paste(pathresults,"qualitycontrol/",sep="")
+pathAbundance=paste(pathresults,"RawGeneExpression/kmer31/",sep="")
+
+library(dplyr)
+library(limma)
+library(ggplot2)
+library(gplots)
+library(RColorBrewer)
+library(scales)
+library(edgeR)
+library(R.utils)
+library(plyr)
+library(statmod)
+library(scales)
+```
+
+## Sample Information and Record of Technical Variables
+### !!! attached sample info txt file
+```{r Load data, include=FALSE}
+setwd(pathResults)
+TPM_raw<-read.table("Transcript_Abundances31.txt", header=TRUE, sep="\t", na.strings='NA', stringsAsFactors = FALSE) 
+
+## upload gene information
+setwd(pathdata)
+geneinfo<-read.table(paste(pathdata,"mart_export.txt",sep=""),header=TRUE,sep='\t',na.strings='NA',stringsAsFactors = FALSE)
+
+## load the sample data
+SampleInfo<-read.table(paste(pathdata,"SampleInformation.txt",sep=""),sep='\t',header=TRUE)
+
+## check that sample info file has the same number of samples at the TPM_raw file
+nrow(SampleInfo)==ncol(TPM_raw)-1
+
+## if there are any EnsemblIDs without a match in biomart, find their chromosomal location and gene name online
+TPM_raw$Human_Ortho_EnsemblID[which(!TPM_raw$Human_Ortho_EnsemblID %in% geneinfo$Ensembl.Gene.ID)]
+
+## reload mart_export.txt with any modifications
+
+#geneinfo<-read.table(paste(pathdata,"mart_export.txt",sep=""),header=TRUE,sep='\t',na.strings='NA',stringsAsFactors = FALSE)
+
+TPM_raw<-cbind(TPM_raw[,1],geneinfo[,c(2,3)],TPM_raw[,-1])
+colnames(TPM_raw)<-c('EnsemblID',colnames(TPM_raw)[-1])
+
+```
+
+## RNA-seq Data
+### Pre-processing
+#### Expression unmapped and mapped
+
+```{r number of mapped reads}
+
+setwd(pathAbundance)
+ldf <- list() # creates a list
+listcsv<-as.character(dir(pattern="*")) # creates the list of all the csv files in the directory in true (not computer) numerical order
+
+length(listcsv)==nrow(SampleInfo)
+
+## sum the est_counts column of each abundance.tsv file
+
+SampleInfo<-SampleInfo[order(SampleInfo$SampleID),]
+SampleInfo$SampleID==listcsv
+
+#n equals the number of columns in SampleInfo
+n=ncol(SampleInfo)
+
+for (k in 1:nrow(SampleInfo)){ 
+  SampleInfo[k,(n+1)]<-as.numeric(sum((read.delim(paste(listcsv[k],"/","abundance.tsv",sep="")))$est_counts))
+}
+
+colnames(SampleInfo)<-c(colnames(SampleInfo)[-n],"Mapped_Reads")
+
+SampleInfo$Proportion_mapped_reads<-SampleInfo$Mapped_Reads/SampleInfo$Raw_reads
+SampleInfo$Unmapped_reads<-SampleInfo$Raw_reads-SampleInfo$Mapped_Reads
+SampleInfo$Proportion_unmapped_reads<-SampleInfo$Unmapped_reads/SampleInfo$Raw_reads
+
+write.table(SampleInfo,(paste(pathdata,"SampleInformationWithMappedCount.txt",sep="")),sep='\t')
+
+head(SampleInfo)
+
+ggplot(SampleInfo, aes(x = factor(SampleID), y = Mapped_Reads, fill = Species)) + 
+  geom_bar(stat = "identity", colour = "black") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  xlab("Sample") + ylab("Number of mapped reads") + 
+  ggtitle("Number of Mapped reads for all samples (RNA-seq)") + 
+  scale_y_continuous(labels=comma) +
+  geom_hline(yintercept = 5000000)
+
+ggplot(SampleInfo, aes(x = factor(SampleID), y = Proportion_mapped_reads, fill = Species)) + 
+  geom_bar(stat = "identity", colour = "black") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  xlab("Sample") + ylab("Proportion of Mapped Reads") + 
+  ggtitle("Proportion of Reads Mapped for all samples (RNA-seq)") + 
+  scale_y_continuous(labels=comma)+
+  geom_hline(yintercept = .2)
+
+## eliminate samples that have fewer that 5 million reads, or less than 20% mapped reads
+
+eliminate_mapped_reads<-c(which(SampleInfo$Mapped_Reads<5000000),which(SampleInfo$Proportion_mapped_reads<0.2))
+```
+
+#### GTEX Expression Comparison
+
+```{r format and load GTEX data, include=FALSE}
+## format GTEX exression data and save, remove splice variant details, then reread into r
+#GtexMedians<-read.delim("GTEx_Analysis_v6p_RNA-seq_RNA-SeQCv1.1.8_gene_median_rpkm.gct",header=F)[-c(1,2),]
+#write.table(GtexMedians,"GTex_Medians_All.txt",sep='\t')
+#remove excess row and column headers in excel, also get rid of versions of gene or ".3" part of gene name, replace spaces with _
+
+setwd(pathdata)
+GtexMedians<-read.table("Gtex_Medians_All.txt",header=T,sep='\t')
+
+## select tissues to compare to
+GtexMedians<-select(GtexMedians, Name, Brain_._Cerebellum,Brain_._Frontal_Cortex_.BA9.,Kidney_._Cortex,Heart_._Left_Ventricle,Liver,Testis)
+
+```
+
+##### Select only genes that overlap between the two data sets
+```{r only look at overlap between datasets}
+## Only compare genes that are present in our dataset (1-1 orthologs)
+GtexMedians_inDS<- GtexMedians[GtexMedians$Name %in% TPM_raw$EnsemblID,]
+
+GtexMedians_inDS<- filter(GtexMedians,Name %in% TPM_raw$EnsemblID)
+                      
+TPM_raw_inGtex<-filter(TPM_raw, EnsemblID %in% GtexMedians_inDS$Name)
+nrow(TPM_raw_inGtex)==nrow(GtexMedians_inDS)
+
+
+GtexMedians_inDS<-GtexMedians_inDS[order(GtexMedians_inDS$Name),]
+
+## Examine the data files, containing gene expression in our dataset in multiple tissues and species, and the GTEX dataset with human expression levels in tissues
+
+## transcript abundances in our data
+head(TPM_raw_inGtex)
+
+## median expression level of all genes in GTEX
+head(GtexMedians_inDS)
+```
+
+##### Calculate the median expression of each gene in each species and tissue
+
+```{r median expressoin of genes in species tissue combos, echo=FALSE}
+
+## specify the species and tissues in your dataset
+species<-c("ggo","hsa","mml","ppa","ppy","ptr")
+tissue<-c("br","cb","ht","kd","lv","ts")
+
+## create a matrix to contain average epxression levels for each species tissue combo
+sampleaverages<-matrix(nrow=nrow(TPM_raw_inGtex),ncol=length(species)*length(tissue))
+
+## populate the matrix with medians from my samples, if there is only 1, just copy over that data to this matrix
+c=0
+for (s in 1:length(species)){
+  for (t in 1:length(tissue)){
+    c<-c+1
+    if(length(grep(paste(species[s],tissue[t],sep="_"), colnames(TPM_raw_inGtex)))!=1){
+      
+sampleaverages[,c]<-(apply(TPM_raw_inGtex[,grep(paste(species[s],tissue[t],sep="_"), colnames(TPM_raw_inGtex))],1,median)) 
+} else if (length(grep(paste(species[s],tissue[t],sep="_"), colnames(TPM_raw_inGtex)))==1) {
+sampleaverages[,c]<-TPM_raw_inGtex[,grep(paste(species[s],tissue[t],sep="_"), colnames(TPM_raw_inGtex))] }
+  }
+}
+
+## name the columns
+c=0
+speciestissuecombo<-vector()
+for (s in 1:length(species)){
+  for (t in 1:length(tissue)){
+    c<-c+1
+ speciestissuecombo[c]<-paste(species[s],tissue[t],sep="_")
+  }}
+colnames(sampleaverages)<- speciestissuecombo
+
+## combine with gene information
+Dataaverages<-cbind(select(TPM_raw_inGtex,EnsemblID),sampleaverages)
+
+head(Dataaverages)
+```
+
+##### Compare Gene Expression Ranks between our human data and GTEX
+
+```{r Examine Gene Expression Rank compared to GTEX}
+
+## determine the gene expression rank in GTEX
+## create new df with ranks instead of expression values
+GtexMedians_inDS_rank<-cbind(select(TPM_raw_inGtex, EnsemblID),apply(GtexMedians_inDS[,-1],2,rank))
+
+## determine the gene expression rank in my dataset
+## create new df with ranks instead of expression values
+TPM_raw_inGtex_rank<-cbind(select(TPM_raw_inGtex, EnsemblID),apply(Dataaverages[,-1],2,rank))
+
+## define same tissue names in the two datasets
+matchnames<-cbind(colnames(GtexMedians_inDS_rank[,-1]), c("hsa_cb","hsa_br","hsa_kd","hsa_ht","hsa_lv","hsa_ts"))
+matchnames
+
+## look at same tissue rank correlations
+rankcorr<-function(matchnames){
+  for (i in 1:nrow(matchnames)){
+  temp<-cbind(select(GtexMedians_inDS_rank, one_of(matchnames[i,1], 'tcount')), select(TPM_raw_inGtex_rank,one_of(matchnames[i,2], 'tcount')))
+
+plot(temp[,1], temp[,2], xlab=paste("GTEX Rank", matchnames[i,1], sep=" "), ylab=paste("Dataset Rank", matchnames[i,2], sep=" "), main=paste(matchnames[i,1],"Rank Comparison, Correlation",cor.test(temp[,1],temp[,2])$estimate, sep=" "))
+}}
+## a trick causes a warning, but you can ignore it and run the function for all desired tissues
+suppressWarnings(rankcorr(matchnames))
+
+## when comparing across tissue type, the expression rank correlation decreases
+## set a mismatched tissue pairs
+mismatch<-cbind(colnames(GtexMedians_inDS_rank[,-1]), c("hsa_br","hsa_cb","hsa_br","hsa_br","hsa_br","hsa_br"))
+mismatch
+suppressWarnings(rankcorr(mismatch))
+
+```
+**The ranked expression of our human tissue expression data is highly ranked with expression data from GTEX. This correlation dramatically changes when comparing different tissue types.**
+
+##### Examine the top 100 most expressed genes in GTEX present in our dataset
+
+```{r Top 100 expressed genes in my DS defined by GTEX, warning=FALSE}
+## create a dataframe with the top 100 most expressed genes in GTEX for one tissue
+Top100Gtex<-GtexMedians_inDS_rank %>% arrange(desc(Testis)) %>% slice(1:100)
+
+## then create a dataframe with the information from our DS for those top 100 genes, expected to be the highest expressed in our human frontal cortex samples
+TopGTEXindata<-filter(TPM_raw,EnsemblID %in% Top100Gtex$EnsemblID)[, c(1,(grep("ts", colnames(TPM_raw_inGtex))))]
+
+## visualize the raw counts per gene for all genes or the top expressed genes
+## boxplots of all and top genes for each human sample
+boxplot(log(TPM_raw[,grep("ts", colnames(TPM_raw_inGtex))]),ylim=c(-5,12), main=paste("log TPM All Genes and top 100 in Gtex","Cerebellum",sep=" "), ylab = "log(TPM)", las = 2, cex.axis = .75)
+boxplot(log(TopGTEXindata[,-1]), ylab = "log(TPM)", las = 2, cex.axis = .75, add=T, col="blue")
+
+```
+** All tissues followed this pattern, indicating the top most expressed in GtEX are highly expressed in our data.**
+
+#### Density plots for the raw data
+```{r}
+## density plots for raw read counts for all and top for each human sample
+
+### load colors
+colors <- colorRampPalette(c(brewer.pal(9, "Blues")[1],brewer.pal(9, "Blues")[9]))(100)
+pal <- c(brewer.pal(9, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"))
+
+## density plot of all genes in all samples
+plotDensities(log(TPM_raw[,-c(1:3)]),main="log(Raw TPM All Genes) Densities, n=13321", col=pal[as.numeric(SampleInfo$Species)])
+
+## one species at a time
+for (s in 1:length(species)){
+plotDensities(log(TPM_raw[,grep(species[s], colnames(TPM_raw))]),main="log(Raw TPM All Genes) Densities, n=13321")
+}
+
+eliminate_oddshape<-c(5,6)
+```
+
+#### human v other species tests
+
+```{r}
+correlationstohuman<-matrix(ncol=1, nrow=nrow(SampleInfo))
+rownames(correlationstohuman)<-SampleInfo$SampleID
+
+
+for (t in tissue){
+  for (i in grep(paste("hsa_",t,sep=""), rownames(correlationstohuman))){
+    correlationstohuman[i,1]<-cor.test(TPM_raw_inGtex[,(i+3)], Dataaverages[,which(colnames(Dataaverages)==paste("hsa_",t,sep=""))])$estimate
+  }
+  for (s in species[which(species!="hsa")]){
+    for (i in grep(paste(s,t,sep="_"), rownames(correlationstohuman))){
+    correlationstohuman[i,1]<-cor.test(TPM_raw_inGtex[,(i+3)], Dataaverages[,which(colnames(Dataaverages)==paste("hsa_",t,sep=""))])$estimate
+  }
+  }
+}
+
+correlationstohuman<-cbind(correlationstohuman,select(SampleInfo,SampleID, Species))
+
+ggplot(as.data.frame(correlationstohuman), aes(x = factor(SampleID), y = correlationstohuman, fill = Species)) + 
+  geom_bar(stat = "identity", colour = "black") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  xlab("Sample") + ylab("Correlation to Human Median Expression") + 
+  ggtitle("Correlation in Expression to Human Tissue") + 
+  scale_y_continuous(labels=comma) 
+
+## remove samples with low co
+eliminate_lowcorr<-which(correlationstohuman$correlationstohuman<.69)
+```
+
+
+# Eliminate samples with poor quality, or with wrong sample tissue
+**Based on the results of PCA, the heatmap, expression density curves, and top gene expression levels, I am eliminating hsa_br_M_4 from the dataset. hsa_br_M_5 will also be eliminated for it was taken from the Temporal lobe, not the frontal cortex or prefrontal cortex.**
+```{r eliminate samples, include=FALSE}
+eliminate_first<-c(eliminate_lowcorr,eliminate_mapped_reads,eliminate_oddshape)
+
+## eliminate bad samples before PC analysis
+TPM_raw_elim<-TPM_raw[,-(eliminate_first+which(colnames(TPM_raw)=="Associated.Gene.Name"))]
+
+## eliminate those from the SampleInfo file as well
+SampleInfo_Elim<-SampleInfo[-eliminate_first,]
+
+
+```
+
+# Eliminate mitochondrial genes and lowly expressed genes
+```{r exclude mito genes, include=FALSE}
+# eliminate all Mitochondrial genes, then get rid of the Chromosome.Name column
+TPM_raw_elim_noMT<-filter(TPM_raw_elim, Chromosome.Name !="MT")
+
+#make the row names
+rownames(TPM_raw_elim_noMT)<-TPM_raw_elim_noMT[,1]
+TPM_raw_elim_noMT <- TPM_raw_elim_noMT[-nrow(TPM_raw_elim_noMT),-1]
+
+## remove rows containing gene names and chromosomes for PCA
+
+TPM_raw_elim_noMT_PCA<-TPM_raw_elim_noMT[,-(1:2)]
+
+```
+
+
+## Remove lowly expressed Genes and square root the data
+```{r Filter lowly expressed Genes}
+## an expression cutoff of 2 TPM is standard, and fits this data well
+expcutoff=2
+
+#make sure only taking genes with >0 TPM expression level
+TPM_raw_elim_noMT_PCA_expressed<- TPM_raw_elim_noMT_PCA[rowSums(TPM_raw_elim_noMT_PCA)>expcutoff*ncol(TPM_raw_elim_noMT_PCA),]
+
+##Square root transform the data
+TPM_raw_elim_noMT_PCA_expressed_sqrt<-sqrt(TPM_raw_elim_noMT_PCA_expressed)
+
+```
+
+# Examine the PCs, Expression Densitiies, and Heatmap of the data before limma
+```{r Plot the PCs before batch correction}
+plot_scores <- function(pca, scores, n, m, cols, points=F, pchs =20, legend=F){
+  xmin <- min(scores[,n]) - (max(scores[,n]) - min(scores[,n]))*0.05
+  if (legend == T){ ## let some room (35%) for a legend                                                                                                                                                 
+    xmax <- max(scores[,n]) + (max(scores[,n]) - min(scores[,n]))*0.50
+  }
+  else {
+    xmax <- max(scores[,n]) + (max(scores[,n]) - min(scores[,n]))*0.05
+  }
+  ymin <- min(scores[,m]) - (max(scores[,m]) - min(scores[,m]))*0.05
+  ymax <- max(scores[,m]) + (max(scores[,m]) - min(scores[,m]))*0.05
+  plot(scores[,n], scores[,m], xlab=paste("PC", n, ": ", round(summary(pca)$importance[2,n],3)*100, "% variance explained", sep=""), ylab=paste("PC", m, ": ", round(summary(pca)$importance[2,m],3)*100, "% variance explained", sep=""), main="PCA of Brain Transcription in Primates", xlim=c(xmin, xmax), ylim=c(ymin, ymax), type="n")
+  if (points == F){
+    text(scores[,n],scores[,m], rownames(scores), col=cols, cex=1)
+  }
+  else {
+    points(scores[,n],scores[,m], col=cols, pch=pchs, cex=1.3)
+  }
+}
+
+## make PC figures function
+plot_PCs <- function(pca,firstPC,lastPC){
+  pca_genes<-prcomp(pca, scale=F)
+  scores<-pca_genes$x
+  for (n in (firstPC-1):(lastPC-2)){
+    n=n+1
+    plot_scores(pca_genes, scores, n, n+1,cols=categoricalData)
+  } }
+
+## make PC figures from desired first PC to last PC
+plot_PCs(t(TPM_raw_elim_noMT_PCA_expressed),1,5)
+
+
+# Clustering (original code from Julien Roux)
+cors <- cor(TPM_raw_elim_noMT_PCA_expressed_sqrt, method="spearman", use="pairwise.complete.obs")
+
+## Load color scale for Heatmap
+colors <- colorRampPalette(c(brewer.pal(9, "Blues")[1],brewer.pal(9, "Blues")[9]))(100)
+
+sample_colors<-c("")
+
+## make the heatmap
+heatmap.2( cors, scale="none",margins = c(12, 12), col=colors, trace='none', denscol="white", labCol=colnames(cors), ColSideColors=pal[as.numeric(SampleInfo$Species)], RowSideColors=categoricalData, cexCol = 0.2 + 1/log10(15), cexRow = 0.2 + 1/log10(15))
+
+``` 
+
+# Normalize the data
+## Adjust for library size (via TMM)
+```{r}
+## use EdgeR to normalize samples, ensuring that a few highly expressed genes in some samples do not appear to be down regulation of other genes
+
+## Perform TMM (trimmed mean of M-values)
+## Create a DGEList object from a table of counts (rows=features, columns=samples), group indicator for each column, library size (optional) and a table of feature annotation (optional).
+dge<-DGEList(counts=TPM_noMT_PCA_expressed_sqrt,lib.size=colSums(TPM_noMT_PCA_expressed_sqrt))
+
+## Calculate Normalization scaling Factors that minimize the log-fold changes between samples for most genes
+dge<-calcNormFactors(dge)
+plot(dge$samples$lib.size)
+
+# Make sure my samples and DGEList object contain the same samples
+summary(colnames(TPM_noMT_PCA_expressed_sqrt) %in% colnames(dge))
+
+```
+
+## Voom and cortift (with the cyclic loess normalizatoin)
+**Decouple the dependency between mean and variance. We will use corfit to model a within-individual term.
+
+```{r}
+## Voom requires a design matrix as input                                                                             
+design<-SampleInfo$Species
+
+## Normalize the columns of a matrix, cyclicly applying loess normalization to normalize each pair of columns to each other.
+TPM.voom.cyclic<-voom(dge,design = model.matrix(~0 + SampleInfo$Species ),normalize.method = "none", plot=T)
+
+
+
+
+```
+
+**by Erin Fry, January 3rd 2017**

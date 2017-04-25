@@ -7,7 +7,7 @@
 export path=/Users/lynchlab/Desktop/ErinFry/ReconAncNeoTranscriptomes/Realigning ##set base directory path
 export pathExonFasta=${path}/results/aligned_exons_sequences_by_species
 export pathRNAseq=${path}/data/RNA_seq_raw
-export pathRawExpression=${path}/results/RawGeneExpression
+export pathRawExpression=${path}/results/RawGeneExpression/kmer31
 export pathScripts=${path}/scripts/map_RNA_seq_data
 
 ##########################################################################################

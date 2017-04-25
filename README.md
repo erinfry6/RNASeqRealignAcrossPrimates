@@ -1,9 +1,10 @@
 ## The code in this repository pseudoaligns RNA seq orthologous exons from Human, Chimpanzee, Bonobo, Gorilla, Orangutan, and Macaque
 
-### Steps 1-5 are adapted from Brawand et al 2011 (http://www.ncbi.nlm.nih.gov/pubmed/22012392)'s pipeline obtained from Anamaria Necsulea
-### Steps 5.5 + were written by Erin Fry (efry@uchicago.edu), Lynch Laboratory at the University of Chicago has modified
+**Steps 1-5 are adapted from the (Brawand et al 2011) [http://www.ncbi.nlm.nih.gov/pubmed/22012392] pipeline obtained from Anamaria Necsulea**
 
-#################################################################################
+
+**Steps 5.5 + were written by Erin Fry (efry@uchicago.edu), Lynch Laboratory at the University of Chicago has modified**
+
 
 Before beginning, create a home directory for the pipeline that contains the following subdirectories
 
@@ -38,11 +39,9 @@ Place the contents of this repository in the scripts folder.
 
 ### Adapted scripts and instructions:
 
-#################################################################################
 
 The scripts are divided in the following "modules" (in order of usage): 
 
-#################################################################################
 
 1) `./download_genomes`  - simple script to download genome sequences from Ensembl FTP site  *EF eliminated unnecessary species*
 
@@ -123,7 +122,6 @@ The scripts are divided in the following "modules" (in order of usage):
  
  -
 
-#################################################################################
 
 ### In general, for a specific procedure there is a generic perl "script", which takes a rather extensive set of parameters (e.g., species, annotations files, genome sequences etc.). 
 ### Then there is a bash script that defines the correct parameters. The bash script will either not take any arguments at all, or the argument will be the species for which we want to do a specific procedure. 

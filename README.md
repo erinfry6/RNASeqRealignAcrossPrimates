@@ -51,6 +51,8 @@ Place the contents of this repository in the scripts folder.
 ## Modify the scripts
 
  - The top of each script (all .sh and .R files) must be modified to contain the proper home directory path
+ 
+ - If you are using a different dataset, you will have to modify some of the scripts to include the correct species. For example, the very first script you will have to manually set up the FTP commands to download the correct genomes.
 
 
 ## Adapted scripts and instructions:
@@ -134,9 +136,10 @@ Place the contents of this repository in the scripts folder.
  
  -
 
+## General notes
+In general, for a specific procedure there is a generic perl "script", which takes a rather extensive set of parameters (e.g., species, annotations files, genome sequences etc.). 
 
-### In general, for a specific procedure there is a generic perl "script", which takes a rather extensive set of parameters (e.g., species, annotations files, genome sequences etc.). 
-### Then there is a bash script that defines the correct parameters. The bash script will either not take any arguments at all, or the argument will be the species for which we want to do a specific procedure. 
+Then there is a bash script that defines the correct parameters. The bash script will either not take any arguments at all, or the argument will be the species for which we want to do a specific procedure. 
 
 For example, you will find in the "get_ensembl_annotations" folder the following scripts:
 

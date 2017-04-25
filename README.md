@@ -25,7 +25,9 @@ Before beginning, create a home directory for the pipeline that contains the fol
 								
 								/FASTQC
 								
-								/Quality Control
+								/QualityControl
+								
+								/RawGeneExpression
 
 				home/scratch
 
@@ -46,7 +48,7 @@ The scripts are divided in the following "modules" (in order of usage):
 
 2) get_ensembl_annotations 
 
-  - download annotations from the Ensembl MySQL database `./get.ensembl.annotations.sh Human` *EF again eliminated unnecessary species*
+  - download annotations from the Ensembl MySQL database `./get.ensembl.annotations.sh Human` *EF eliminated unnecessary species*
 
  -  format annotations into "exon blocks" (union of all exon coordinates) `./make.exon.blocks.ensembl.sh $species`
 
@@ -74,7 +76,7 @@ The scripts are divided in the following "modules" (in order of usage):
 
  - extract aligned exon sequence for each 1-1 ortho gene family and for each species `./extract.aligned.exons.sequences.sh` *EF made slight modifications in first function of perl script to run on a mac*
 
- - check exon alignments by  computing % sequence identity `./compute.percentage.identity.sh`
+ - check exon alignments by computing % sequence identity `./compute.percentage.identity.sh`
  
   ### EF's code starts here
  

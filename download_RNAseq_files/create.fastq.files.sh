@@ -21,15 +21,22 @@ do
 cd $d
 if [ -e RNAseq_1.fastq ]
 then
-echo "already created ${d} fasta file"
+echo "already created ${d} fastq file"
 elif [ -e RNAseq_2.fastq ]
 then
-echo "already created ${d} fasta file"
+echo "already created ${d} fastq file"
 elif [ -e RNAseq.fastq ]
 then
-echo "already created ${d} fasta file"
+echo "already created ${d} fastq file"
 else
+echo creating $d fastq
 fastq-dump RNAseq.sra --split-3
+
+rm *.sra
+echo removed sra file compressing $d fastq 
+
+gzip *.fastq
+
 fi
 
 cd ..

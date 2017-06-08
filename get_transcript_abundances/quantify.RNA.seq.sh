@@ -63,16 +63,16 @@ fi
     do
     echo Quantifying ${i}
     cd ${i}
-    numreads=$(ls -l *.fastq | wc -l)
+    numreads=$(ls -l *.fastq.gz | wc -l)
     
     if [ ${numreads} = "1" ]; then
     echo single ends reads
-    kallisto quant -i ${pathExonFasta}/${sp}.idx -o ${pathResults}/$i -b 100 --single -l 76 -s 1 RNAseq.fastq
+    kallisto quant -i ${pathExonFasta}/${sp}.idx -o ${pathResults}/$i -b 100 --single -l 76 -s 1 RNAseq.fastq.gz
     fi
 	
 	if [ ${numreads} = "2" ]; then
     echo paired ends reads
-    kallisto quant -i ${pathExonFasta}/${sp}.idx -o ${pathResults}/$i -b 100 RNAseq_1.fastq RNAseq_2.fastq
+    kallisto quant -i ${pathExonFasta}/${sp}.idx -o ${pathResults}/$i -b 100 RNAseq_1.fastq.gz RNAseq_2.fastq.gz
     fi
 
 	cd ..

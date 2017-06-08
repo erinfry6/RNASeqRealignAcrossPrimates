@@ -110,7 +110,18 @@ Place the contents of this repository in the scripts folder.
  
  - `./TPM.csv.creation.sh` creates one file with expression data from all samples
  
- #### 8) Mapped Reads Quality Control http://lauren-blake.github.io/Reg_Evo_Primates/analysis/index.html
+ 
+ #### 8) Simulate_RNA_seq_data to check for biases in pipeline
+ 
+ - `R --vanilla <sim_RNA_seq.r` will simulate RNA-seq samples, detailed explanation at the beginning of the script
+ 
+ - `./quantify.RNA.seq.sh` pseudoaligns and quantifies RNA seq data to fasta files using Kallisto
+ 
+  - `./TPM.csv.creation.sh` creates one file with expression data from all samples
+ 
+ 
+ 
+ #### 9) Mapped Reads Quality Control http://lauren-blake.github.io/Reg_Evo_Primates/analysis/index.html
  
  - Use BioMart in ensembl to get the gene names and chromosomal locations of all genes
  

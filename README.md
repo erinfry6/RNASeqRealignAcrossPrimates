@@ -117,38 +117,19 @@ Place the contents of this repository in the scripts folder.
  
  - `./quantify.RNA.seq.sh` pseudoaligns and quantifies RNA seq data to fasta files using Kallisto
  
-  - `./TPM.csv.creation.sh` creates one file with expression data from all samples
+ - `./TPM.csv.creation.sh` creates one file with expression data from all samples
  
  
  
- #### 9) Mapped Reads Quality Control http://lauren-blake.github.io/Reg_Evo_Primates/analysis/index.html
+ #### 9) Process_data
  
- - Use BioMart in ensembl to get the gene names and chromosomal locations of all genes
+ - Use BioMart in ensembl to get the gene names and chromosomal locations of all genes in the dataset
+ 
+ - PrepDataforBAGER.Rmd file eliminates bad samples and processes the data for Bayesian Ancestral Gene Expression Reconstruction to identify gene expression shifts in the human lineage.
  
  
- 
-#### Finding Bad samples:
- 
- - FASTQC
- 
- - % mapped to transcriptome
- 
- - sequencing depth/density
- 
- - GC across samples
- 
- #### QC:
- 
- - eliminate mitochondrial genes
- 
- - eliminate all genes not expressed at all in all samples
- 
- - sqrt transform TPM values b/c should not log transform ratio measurements  and one should sqrt transform when variance ~ mean
- 
- -
-
 ## General notes
-In general, for a specific procedure there is a generic perl "script", which takes a rather extensive set of parameters (e.g., species, annotations files, genome sequences etc.). 
+In general the first steps include a generic perl "script", which takes a rather extensive set of parameters (e.g., species, annotations files, genome sequences etc.). 
 
 Then there is a bash script that defines the correct parameters. The bash script will either not take any arguments at all, or the argument will be the species for which we want to do a specific procedure. 
 

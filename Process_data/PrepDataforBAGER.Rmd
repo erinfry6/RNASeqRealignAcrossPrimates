@@ -1,7 +1,7 @@
 ---
 title: "Quality Control and Processing of Brawand et al RNA Seq data in preparation for BAGER"
 author: "Erin Fry"
-date: Sys.Date()
+date: "`r Sys.Date()`"
 output:
   html_document:
     toc: true
@@ -350,7 +350,7 @@ rownames(TPM_noMT_expressed_log)<-TPM_noMT_expressed$EnsemblID
 ```
 
 ## Examine Expression Density Curves by Tissue
-```{r}
+```{r density curves}
 ### load colors
 pal <- c(brewer.pal(8, "Set1"), brewer.pal(8, "Dark2"))
 
@@ -600,7 +600,7 @@ plotPCandHeatmap(TPM_noMT_expressed_log_Second_Pass, Sample_Info_First_Elim)
 ```
 
 ### Remove samples that still do not cluster with species or tissue and reregress
-```{r}
+```{r remove final round}
 ## samples which failed to cluster properly in the PCA
 ## eliminating hsa_br_M_4 and hsa_br_M_1
 fails<-c(13,16)
@@ -687,4 +687,4 @@ for (t in tissue){
 ```
 
 
-**by Erin Fry, June 8th 2017**
+**by Erin Fry, `r Sys.Date()` 2017**
